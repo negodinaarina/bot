@@ -15,6 +15,25 @@ dp = Dispatcher(bot)
 async def cmd_start(message: types.Message):
     await message.answer("Блин вау ну все")
 
+
+@dp.message_handler(commands=['нахуй_сходи'])
+async def cmd_start(message: types.Message):
+    await message.answer("Сходил")
+
+
+@dp.message_handler(commands=['блять'])
+async def cmd_start(message: types.Message):
+    await message.answer("Согласен")
+
+
+@dp.message_handler(commands=['как_дела'])
+async def cmd_start(message: types.Message):
+    await message.answer("я хочу псж")
+
+
+@dp.message_handler()
+async def cmd_start(message: types.Message):
+    await message.answer("вопрос нормально задай")
 # Запуск процесса поллинга новых апдейтов
 async def main():
     await dp.start_polling(bot)
