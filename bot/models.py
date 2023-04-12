@@ -1,24 +1,20 @@
-import sqlalchemy
-from sqlalchemy import URL, create_engine
-from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column
-
-url_object = URL.create(
-    "postgresql+pg8000",
-    username="postgres",
-    password="1111",  # plain (unescaped) text
-    host="pghost10",
-    database="botdb",
-)
-
-engine = create_engine(url_object)
-session = Session(engine)
+from sqlalchemy import URL, create_engine, Table
+from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy.orm import declarative_base, sessionmaker
+from datetime import datetime
 
 
-# class Base(DeclarativeBase):
-#     pass
-#
-#
-# class User(Base):
-#     __tablename__ = "users"
-#     id: Mapped[int] = mapped_column(primary_key=True)
-#
+engine = create_engine("sqlite:///bot.db")
+session = sessionmaker(bind=engine)
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "user"
+    user_id = Column(Integer, primary_key=True)
+    bird_name = Column(String)
+    speed_level = Column(Integer)
+    level_progress = Column(Integer)
+
+
+Base.metadata.create_all(engine)
+
