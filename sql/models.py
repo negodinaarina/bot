@@ -91,6 +91,6 @@ class Comment(Base):
         comment.rating = rating
         session.commit()
 
-
 Base.metadata.create_all(engine)
 
+#проверим говнинку
