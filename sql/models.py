@@ -83,8 +83,7 @@ class Comment(Base):
         session.commit()
 
     def choose_recipient(self, name):
-        # user = session.get(User, )
-        pass
+        print('AAAAA')
 
     def rate_comment(self, id):
         pass
