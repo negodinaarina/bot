@@ -98,7 +98,15 @@ class Comment(Base):
         comment = session.get(Comment, id)
         comment.rating = rating
         session.commit()
+class Levels(Base):
+    __tablename__ = "birds"
+    id = Column(Integer)
+    bird_feature = Column(Text)
+    bird_description = Column(Text)
+    bird_task = Column(Text)
+    bird_name = Column(Text)
+    bird_level = Column(Integer)
 
-
+#klfdmskfjacklsdjflkasmdkjgvl/dSA<M>cv
 Base.metadata.create_all(engine)
 
