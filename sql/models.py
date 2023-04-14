@@ -11,59 +11,63 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "user"
-    id = Column(Integer, primary_key=True)
-    tg_id = Column(String)
+    tg_id = Column(String, primary_key=True)
+    tg_nickname = Column(String)
     bird_name = Column(String)
-    level_id = Column(Integer)
+    level = Column(Integer)
     level_progress = Column(Integer)
     task_completed = Column(Boolean)
     task_id = Column(Integer)
 
-    def add_user(self, id):
+
+    def add_user(self, id, nickname):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        user = session.get(User, tg_id=id)
-        if user is not None:
-            return
-        user = User(tg_id=id, level_id=0, level_progress=0, task_id=None, task_completed=None, bird_name="ПТИЦА")
+        user = User(tg_id=id, tg_nickname=nickname, level=0, level_progress=0, task_id=None, task_completed=None,
+                        bird_name="ПТИЦА")
         session.add(user)
         session.commit()
 
 
-    def edit_bird_name(self, id, name):
+    def if_exists(self, id):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
+        user = session.get(User, id)
+        if user is None:
+            return False
+        else:
+            return True
+
+    def edit_bird_name(self, id, name):
         user = session.get(User, id)
         user.bird_name=name
         session.commit()
 
-    def change_level_progress(self, id, points):
-        Session = sessionmaker()
-        Session.configure(bind=engine)
-        session = Session()
+    @staticmethod
+    def change_level_progress(id, points):
         user = session.get(User, id)
         user.level_progress = user.level_progress + points
         if user.level_progress > 100:
-            user.level_id += 1
+            user.level += 1
             user.level_progress = user.level_progress - 100
         elif user.level_progress < 0:
-            user.level_id -= 1
+            user.level -= 1
             user.level_progress = 100 + user.level_progress
         session.commit()
 
     def get_profile_data(self, id):
-        Session = sessionmaker()
-        Session.configure(bind=engine)
-        session = Session()
         user = session.get(User, id)
         return user
 
 
     def find_user(self, string):
-        pass
-
+        try:
+            user = session.get(User, tg_nickname=string)
+            return user
+        except:
+            return "Неверно введен ник, попробуйте снова"
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -76,17 +80,21 @@ class Comment(Base):
     Session.configure(bind=engine)
     session = Session()
 
-    def add_comment(self, sender_id, recipient_id):
+
+    @staticmethod
+    def add_comment(sender_id, recipient_id):
         comment = Comment(sender_id=sender_id, recipient_id=recipient_id, text=None, rating=None)
         session.add(comment)
         session.commit()
 
-    def edit_text(self, id, text):
+    @staticmethod
+    def edit_text(id, text):
         comment = session.get(Comment, id=id)
         comment.text = text
         session.commit()
 
-    def rate_comment(self, id, rating):
+    @staticmethod
+    def rate_comment(id, rating):
         comment = session.get(Comment, id)
         comment.rating = rating
         session.commit()
