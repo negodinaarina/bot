@@ -11,8 +11,7 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "user"
-    id = Column(Integer, primary_key=True)
-    tg_id = Column(String)
+    tg_id = Column(Integer, primary_key=True)
     bird_name = Column(String)
     level_id = Column(Integer)
     level_progress = Column(Integer)
@@ -91,6 +90,15 @@ class Comment(Base):
         comment.rating = rating
         session.commit()
 
+class Levels(Base):
+    __tablename__ = "birds"
+    id = Column(Integer)
+    bird_feature = Column(Text)
+    bird_description = Column(Text)
+    bird_task = Column(Text)
+    bird_name = Column(Text)
+    bird_level = Column(Integer)
+
+
 Base.metadata.create_all(engine)
 
-#проверим говнинку
