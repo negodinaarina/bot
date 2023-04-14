@@ -42,7 +42,7 @@ class User(Base):
 
     def edit_bird_name(self, id, name):
         user = session.get(User, id)
-        user.bird_name=name
+        user.bird_name = name
         session.commit()
 
     @staticmethod
@@ -71,6 +71,7 @@ class User(Base):
             return user
         except:
             return "Неверно введен ник, попробуйте снова"
+
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -117,6 +118,7 @@ class Levels(Base):
         session = Session()
         bird_info = session.get(Levels, level)
         return bird_info
+
 
 
 Base.metadata.create_all(engine)

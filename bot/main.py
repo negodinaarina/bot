@@ -10,6 +10,7 @@ bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
 # Диспетчер
 dp = Dispatcher(bot)
 
+
 # Хэндлер на команду /start
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
@@ -26,9 +27,14 @@ async def reg_user(message: types.Message):
             await message.answer("Ты ху?й")
         else:
             user.add_user(id=id, nickname=nickname)
+            await message.answer("Введите имя птицы!")
+            name = message.text
+            user.edit_bird_name(id, name)
             await message.answer("Вы успешно зарегались!")
+
     else:
         return
+
 
 @dp.message_handler(commands=['profile'])
 async def get_level_info(message: types.Message):
@@ -43,6 +49,8 @@ async def get_level_info(message: types.Message):
         await message.answer(msg)
     else:
         return
+
+@dp.message_handler(commands=['edit'])
 
 @dp.message_handler(commands=['нахуй_сходи'])
 async def cmd_start(message: types.Message):
@@ -63,11 +71,10 @@ async def cmd_start(message: types.Message):
 async def cmd_start(message: types.Message):
     await message.answer("вопрос нормально задай")
 # Запуск процесса поллинга новых апдейтов
+
+
 async def main():
     await dp.start_polling(bot)
-
-
-
 
 if __name__ == "__main__":
     asyncio.run(main())
