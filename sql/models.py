@@ -41,12 +41,18 @@ class User(Base):
             return True
 
     def edit_bird_name(self, id, name):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         user = session.get(User, id)
         user.bird_name = name
         session.commit()
 
     @staticmethod
     def change_level_progress(id, points):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         user = session.get(User, id)
         user.level_progress = user.level_progress + points
         if user.level_progress > 100:
@@ -66,6 +72,9 @@ class User(Base):
 
 
     def find_user(self, string):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         try:
             user = session.get(User, tg_nickname=string)
             return user
@@ -87,18 +96,27 @@ class Comment(Base):
 
     @staticmethod
     def add_comment(sender_id, recipient_id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         comment = Comment(sender_id=sender_id, recipient_id=recipient_id, text=None, rating=None)
         session.add(comment)
         session.commit()
 
     @staticmethod
     def edit_text(id, text):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         comment = session.get(Comment, id=id)
         comment.text = text
         session.commit()
 
     @staticmethod
     def rate_comment(id, rating):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         comment = session.get(Comment, id)
         comment.rating = rating
         session.commit()
