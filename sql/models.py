@@ -61,6 +61,10 @@ class User(Base):
         return user
 
 
+    def find_user(self, string):
+        pass
+
+
 class Comment(Base):
     __tablename__ = "comments"
     id = Column(Integer, primary_key=True)
@@ -82,14 +86,11 @@ class Comment(Base):
         comment.text = text
         session.commit()
 
-    def choose_recipient(self, name):
-        print('AAAAA')
+    def rate_comment(self, id, rating):
+        comment = session.get(Comment, id)
+        comment.rating = rating
+        session.commit()
 
-    def rate_comment(self, id):
-        pass
-
-    def give_point(self, id):
-        pass
 
 Base.metadata.create_all(engine)
 
