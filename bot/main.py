@@ -18,16 +18,31 @@ async def cmd_start(message: types.Message):
 
 @dp.message_handler(commands=['reg'])
 async def reg_user(message: types.Message):
-    nickname = message.from_user.username
-    id = message.from_user.id
-    user = User()
-    if user.if_exists(id):
-        await message.answer("Ты ху?й")
+    if message.chat.type == 'private':
+        nickname = message.from_user.username
+        id = message.from_user.id
+        user = User()
+        if user.if_exists(id):
+            await message.answer("Ты ху?й")
+        else:
+            user.add_user(id=id, nickname=nickname)
+            await message.answer("Вы успешно зарегались!")
     else:
-        user.add_user(id=id, nickname=nickname)
-        await message.answer("Вы успешно зарегались!")
+        return
 
-
+@dp.message_handler(commands=['profile'])
+async def get_level_info(message: types.Message):
+    if message.chat.type == 'private':
+        id = message.from_user.id
+        u = User()
+        user = u.get_profile_data(id)
+        level = u.get_profile_data(id).level
+        l = Levels()
+        bird = l.get_bird_data(level)
+        msg = f"Вы - {bird.bird_name}🐤 \nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
+        await message.answer(msg)
+    else:
+        return
 
 @dp.message_handler(commands=['нахуй_сходи'])
 async def cmd_start(message: types.Message):
@@ -50,6 +65,9 @@ async def cmd_start(message: types.Message):
 # Запуск процесса поллинга новых апдейтов
 async def main():
     await dp.start_polling(bot)
+
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())

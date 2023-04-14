@@ -24,7 +24,7 @@ class User(Base):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        user = User(tg_id=id, tg_nickname=nickname, level=0, level_progress=0, task_id=None, task_completed=None,
+        user = User(tg_id=id, tg_nickname=nickname, level=1, level_progress=0, task_id=None, task_completed=None,
                         bird_name="ПТИЦА")
         session.add(user)
         session.commit()
@@ -58,6 +58,9 @@ class User(Base):
         session.commit()
 
     def get_profile_data(self, id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
         user = session.get(User, id)
         return user
 
@@ -98,6 +101,7 @@ class Comment(Base):
         comment = session.get(Comment, id)
         comment.rating = rating
         session.commit()
+
 class Levels(Base):
     __tablename__ = "birds"
     id = Column(Integer, primary_key=True)
@@ -107,27 +111,13 @@ class Levels(Base):
     bird_name = Column(Text)
     bird_level = Column(Integer)
 
-    def get_bird_data(self, id):
+    def get_bird_data(self, level):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        bird_info = session.query(Levels).filter(Levels.bird_level==id).all()
+        bird_info = session.get(Levels, level)
         return bird_info
 
-
-Session = sessionmaker()
-Session.configure(bind=engine)
-session = Session()
-level = Levels(
-    bird_feature='фича 2',
-    bird_description='описание 2',
-    bird_task='ну ченить поделай 2',
-    bird_name='воробей',
-    bird_level=1
-
-)
-session.add(level)
-session.commit()
 
 Base.metadata.create_all(engine)
 
