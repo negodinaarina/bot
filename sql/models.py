@@ -100,13 +100,34 @@ class Comment(Base):
         session.commit()
 class Levels(Base):
     __tablename__ = "birds"
-    id = Column(Integer)
+    id = Column(Integer, primary_key=True)
     bird_feature = Column(Text)
     bird_description = Column(Text)
     bird_task = Column(Text)
     bird_name = Column(Text)
     bird_level = Column(Integer)
 
-#klfdmskfjacklsdjflkasmdkjgvl/dSA<M>cv
+    def get_bird_data(self, id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        bird_info = session.query(Levels).filter(Levels.bird_level==id).all()
+        return bird_info
+
+
+Session = sessionmaker()
+Session.configure(bind=engine)
+session = Session()
+level = Levels(
+    bird_feature='фича 2',
+    bird_description='описание 2',
+    bird_task='ну ченить поделай 2',
+    bird_name='воробей',
+    bird_level=1
+
+)
+session.add(level)
+session.commit()
+
 Base.metadata.create_all(engine)
 
