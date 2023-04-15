@@ -17,6 +17,12 @@ async def cmd_start(message: types.Message):
     await message.answer("Блин вау ну все")
 
 
+@dp.message_handler(commands=['edit_bird'])
+async def edit_bird(message:types.Message):
+    await message.answer("Как вы хотите назвать свою птицу?")
+#     блять я птица
+
+
 @dp.message_handler(commands=['reg'])
 async def reg_user(message: types.Message):
     if message.chat.type == 'private':
@@ -27,11 +33,8 @@ async def reg_user(message: types.Message):
             await message.answer("Ты ху?й")
         else:
             user.add_user(id=id, nickname=nickname)
-            await message.answer("Введите имя птицы!")
-            name = message.text
-            user.edit_bird_name(id, name)
             await message.answer("Вы успешно зарегались!")
-
+            await get_level_info(message)
     else:
         return
 
@@ -45,7 +48,7 @@ async def get_level_info(message: types.Message):
         level = u.get_profile_data(id).level
         l = Levels()
         bird = l.get_bird_data(level)
-        msg = f"Вы - {bird.bird_name}🐤 \nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
+        msg = f"Ваша птица - {bird.bird_name}🐤\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
         await message.answer(msg)
     else:
         return
@@ -69,7 +72,7 @@ async def cmd_start(message: types.Message):
 
 @dp.message_handler()
 async def cmd_start(message: types.Message):
-    await message.answer("вопрос нормально задай")
+    return message.text
 # Запуск процесса поллинга новых апдейтов
 
 
