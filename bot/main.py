@@ -45,6 +45,7 @@ async def reg_user(message: types.Message):
             await message.answer("Ты ху?й")
         else:
             user.add_user(id=id, nickname=nickname)
+            await edit_bird(message)
             await message.answer("Вы успешно зарегались!")
             await get_level_info(message)
     else:
