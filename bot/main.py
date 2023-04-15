@@ -2,26 +2,38 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types
 from sql.models import User, Comment, Levels
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher import FSMContext
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
-# Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
-# Объект бота
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
-# Диспетчер
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=MemoryStorage())
+
+class Form(StatesGroup):
+    name = State()
 
 
-# Хэндлер на команду /start
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
     await message.answer("Блин вау ну все")
 
 
-@dp.message_handler(commands=['edit_bird'])
-async def edit_bird(message:types.Message):
-    await message.answer("Как вы хотите назвать свою птицу?")
-#     блять я птица
+@dp.message_handler(commands='edit_bird')
+async def edit_bird(message: types.Message):
+    await Form.name.set()
+    await message.answer("Как вы хотите назвать птицу?")
 
+
+@dp.message_handler(state=Form.name)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['name'] = message.text
+        id = message.from_user.id
+        user = User()
+        user.edit_bird_name(id, data['name'])
+    await bot.send_message(id, f"Имя сменено на {data['name']}")
+    await state.finish()
 
 @dp.message_handler(commands=['reg'])
 async def reg_user(message: types.Message):
@@ -51,7 +63,7 @@ async def get_level_info(message: types.Message):
     else:
         return
 
-@dp.message_handler(commands=['edit'])
+# @dp.message_handler(commands=['edit'])
 
 @dp.message_handler(commands=['нахуй_сходи'])
 async def cmd_start(message: types.Message):
@@ -71,7 +83,6 @@ async def cmd_start(message: types.Message):
 @dp.message_handler()
 async def cmd_start(message: types.Message):
     return message.text
-# Запуск процесса поллинга новых апдейтов
 
 
 async def main():
