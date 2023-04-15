@@ -38,15 +38,13 @@ async def reg_user(message: types.Message):
     else:
         return
 
-
-@dp.message_handler(commands=['profile'])
+@dp.message_handler(content_types=['text'], commands=['profile'])
 async def get_level_info(message: types.Message):
     if message.chat.type == 'private':
         id = message.from_user.id
-        u = User()
-        user = u.get_profile_data(id)
-        level = u.get_profile_data(id).level
+        user = User().get_profile_data(id)
         l = Levels()
+        level = User().get_profile_data(id).level
         bird = l.get_bird_data(level)
         msg = f"Ваша птица - {bird.bird_name}🐤\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
         await message.answer(msg)
