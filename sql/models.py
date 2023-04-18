@@ -161,6 +161,36 @@ class Event(Base):
         return event_info
 
 
+class Chat(Base):
+    __tablename__ = "chats"
+    chat_id = Column(String, primary_key=True)
+    chat_name = Column(String)
+
+    @staticmethod
+    def get_all_chats():
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        chats = session.query(Chat).all()
+        return chats
+
+    def add_chat(self, id, title):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        chat = Chat(chat_id=id, chat_name=title)
+        session.add(chat)
+        session.commit()
+
+
+    def get_chat_by_title(self, title):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        chat = session.query(Chat).filter_by(chat_name=title).first()
+        return chat
+
+
 
 Base.metadata.create_all(engine)
 

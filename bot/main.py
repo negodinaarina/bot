@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types, executor
-from sql.models import User, Comment, Levels, Event
+from sql.models import User, Comment, Levels, Event, Chat
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -23,6 +23,7 @@ class EventForm(StatesGroup):
     time = State()
     place = State()
     price = State()
+    chat_id = State()
 
 
 async def set_main_menu():
@@ -129,10 +130,34 @@ async def process_place(message: types.Message, state: FSMContext):
 async def process_price(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['price'] = int(message.text)
-        await message.answer(f"{data['title']}\n{data['description']}")
         event = Event()
         event.create_event(data['title'], data['description'], data['date'], data['time'], data['place'], data['price'])
+    await EventForm().next()
+    chats = Chat.get_all_chats()
+    choice = ''
+    for chat in chats:
+        choice += f"{chat.chat_name}\n"
+    await message.answer(f"Выберите чат:\n{choice}")
+
+
+@dp.message_handler(state=EventForm.chat_id)
+async def end_state(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['chat_id'] = message.text
+        ch = Chat()
+        chat = ch.get_chat_by_title(data['chat_id'])
+        msg = f"Новый слёт!\n{data['title']}\n{data['description']}\n{data['date']} {data['time']}\n{data['place']}\n Награда - {data['price']} зёрен."
+        await bot.send_message(chat.chat_id, msg)
     await state.finish()
+
+
+@dp.message_handler(commands=['reg_chat'])
+async def cmd_reg_chat(message: types.Message):
+    id = message.chat.id
+    title = message.chat.title
+    chat = Chat()
+    chat.add_chat(id, title)
+    await message.answer("Чат зарегистрирован")
 
 
 @dp.message_handler(commands=['нахуй_сходи'])
