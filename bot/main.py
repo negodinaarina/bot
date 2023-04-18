@@ -1,18 +1,36 @@
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, types
-from sql.models import User, Comment, Levels
+from aiogram import Bot, Dispatcher, types, executor
+from sql.models import User, Comment, Levels, Event
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
 dp = Dispatcher(bot, storage=MemoryStorage())
 
+
 class Form(StatesGroup):
     name = State()
 
+
+class EventForm(StatesGroup):
+    title = State()
+    description = State()
+    date = State()
+    time = State()
+    place = State()
+    price = State()
+
+
+async def set_main_menu():
+    await bot.set_my_commands([
+        BotCommand(command="/edit_bird", description="Изменить имя птицы"),
+        BotCommand(command="/profile", description="Просмотреть профиль"),
+        BotCommand(command="/create_event", description="Создать слет")
+    ])
 
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
@@ -45,7 +63,6 @@ async def reg_user(message: types.Message):
             await message.answer("Ты ху?й")
         else:
             user.add_user(id=id, nickname=nickname)
-            await edit_bird(message)
             await message.answer("Вы успешно зарегались!")
             await get_level_info(message)
     else:
@@ -64,7 +81,59 @@ async def get_level_info(message: types.Message):
     else:
         return
 
-# @dp.message_handler(commands=['edit'])
+@dp.message_handler(commands=['create_event'])
+async def create_event(message: types.Message):
+    await EventForm.title.set()
+    await message.answer("Введите название мероприятия")
+
+
+@dp.message_handler(state=EventForm.title)
+async def process_title(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['title'] = message.text
+    await EventForm.next()
+    await message.answer("Введите описание мероприятия")
+
+@dp.message_handler(state=EventForm.description)
+async def process_desc(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['description'] = message.text
+    await EventForm.next()
+    await message.answer("Введите дату мероприятия")
+
+
+@dp.message_handler(state=EventForm.date)
+async def process_date(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['date'] = message.text
+    await EventForm.next()
+    await message.answer("Введите время мероприятия")
+
+@dp.message_handler(state=EventForm.time)
+async def process_time(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['time'] = message.text
+    await EventForm.next()
+    await message.answer("Введите место мероприятия")
+
+
+@dp.message_handler(state=EventForm.place)
+async def process_place(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['place'] = message.text
+    await EventForm.next()
+    await message.answer("Введите стоимость мероприятия")
+
+
+@dp.message_handler(state=EventForm.price)
+async def process_price(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['price'] = int(message.text)
+        await message.answer(f"{data['title']}\n{data['description']}")
+        event = Event()
+        event.create_event(data['title'], data['description'], data['date'], data['time'], data['place'], data['price'])
+    await state.finish()
+
 
 @dp.message_handler(commands=['нахуй_сходи'])
 async def cmd_start(message: types.Message):
@@ -87,6 +156,7 @@ async def cmd_start(message: types.Message):
 
 
 async def main():
+    await set_main_menu()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

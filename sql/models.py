@@ -89,9 +89,6 @@ class Comment(Base):
     recipient_id = Column(Integer)
     text = Column(Text)
     rating = Column(Integer)
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-    session = Session()
 
 
     @staticmethod
@@ -136,6 +133,32 @@ class Levels(Base):
         session = Session()
         bird_info = session.get(Levels, level)
         return bird_info
+
+class Event(Base):
+    __tablename__ = "events"
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    description = Column(Text)
+    date = Column(String)
+    time = Column(String)
+    place = Column(String)
+    price = Column(Integer)
+    status = Column(Boolean)
+
+    def create_event(self, title, description, date, time, place, price):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        event = Event(title=title, description=description, date=date, time=time, place=place, price=price, status=False)
+        session.add(event)
+        session.commit()
+
+    def get_event(self, id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        event_info = session.get(Event, id)
+        return event_info
 
 
 
