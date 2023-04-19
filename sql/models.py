@@ -143,21 +143,21 @@ class Event(Base):
     time = Column(String)
     place = Column(String)
     price = Column(Integer)
-    status = Column(Boolean)
+    code_phrase = Column(String)
 
-    def create_event(self, title, description, date, time, place, price):
+    def create_event(self, title, description, date, time, place, price, phrase):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        event = Event(title=title, description=description, date=date, time=time, place=place, price=price, status=False)
+        event = Event(title=title, description=description, date=date, time=time, place=place, price=price, code_phrase=phrase)
         session.add(event)
         session.commit()
 
-    def get_event(self, id):
+    def get_event(self, phrase):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        event_info = session.get(Event, id)
+        event_info = session.query(Event).filter_by(code_phrase=phrase).first()
         return event_info
 
 
