@@ -6,6 +6,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand
+import random
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
@@ -23,14 +24,22 @@ class EventForm(StatesGroup):
     time = State()
     place = State()
     price = State()
+    code_phrase = State()
     chat_id = State()
 
+class CheckEventForm(StatesGroup):
+    code_phrase = State()
+
+
+class BirdMailForm(StatesGroup):
+    letter = State()
 
 async def set_main_menu():
     await bot.set_my_commands([
         BotCommand(command="/edit_bird", description="Изменить имя птицы"),
         BotCommand(command="/profile", description="Просмотреть профиль"),
-        BotCommand(command="/create_event", description="Создать слет")
+        BotCommand(command="/create_event", description="Создать слёт"),
+        BotCommand(command="/check_event", description="Отметить слёт")
     ])
 
 @dp.message_handler(commands=['start'])
@@ -131,8 +140,16 @@ async def process_place(message: types.Message, state: FSMContext):
 async def process_price(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['price'] = int(message.text)
+    await EventForm.next()
+    await message.answer("Введите кодовое слово")
+
+
+@dp.message_handler(state=EventForm.code_phrase)
+async def process_phrase(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['code_phrase'] = message.text
         event = Event()
-        event.create_event(data['title'], data['description'], data['date'], data['time'], data['place'], data['price'])
+        event.create_event(data['title'], data['description'], data['date'], data['time'], data['place'], data['price'], data['code_phrase'])
     await EventForm().next()
     chats = Chat.get_all_chats()
     choice = ''
@@ -148,6 +165,7 @@ async def end_state(message: types.Message, state: FSMContext):
         ch = Chat()
         chat = ch.get_chat_by_title(data['chat_id'])
         msg = f"Новый слёт!\n{data['title']}\n{data['description']}\n{data['date']} {data['time']}\n{data['place']}\n Награда - {data['price']} зёрен."
+        await message.answer("Мероприятие создано, объявление отправлено в общий чат")
         await bot.send_message(chat.chat_id, msg)
     await state.finish()
 
@@ -161,6 +179,62 @@ async def cmd_reg_chat(message: types.Message):
     await message.answer("Чат зарегистрирован")
 
 
+@dp.message_handler(commands=['check_event'])
+async def check_event(message: types.Message):
+    if message.chat.type == 'private':
+        await CheckEventForm.code_phrase.set()
+        await message.answer("Введите кодовое слово")
+    else:
+        pass
+
+@dp.message_handler(state=CheckEventForm.code_phrase)
+async def process_phrase(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['code_phrase'] = message.text
+        try:
+            e = Event()
+            event = e.get_event(data['code_phrase'])
+            points = event.price
+            id = message.from_user.id
+            user = User().get_profile_data(id)
+            user.change_level_progress(id, points)
+            await message.answer(f"Мероприятие отмечено, вы получили  {points} зерен!")
+        except:
+            await message.answer(f"Мероприятие не найдено...")
+    await state.finish()
+
+
+@dp.message_handler(commands=['bird_mail'])
+async def cmd_start(message: types.Message):
+    if message.chat.type == 'private':
+        await BirdMailForm.letter.set()
+        await message.answer("Напишите письмо!")
+    else:
+        pass
+
+@dp.message_handler(state=BirdMailForm.letter)
+async def process_phrase(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['letter'] = message.text
+        try:
+            u = User()
+            users = u.all_users()
+            user = random.choice(users)
+            while True:
+                if user.tg_id != message.from_user.id:
+                    await bot.send_message(user.tg_id, data['letter'])
+                    u.change_level_progress(message.from_user.id, 5)
+                    await message.answer("Сообщение отправлено, вы получили 5 зёрен.")
+                    break
+        except:
+            await message.answer(f"Что-то пошло не так...")
+    await state.finish()
+
+@dp.message_handler()
+async def cmd_start(message: types.Message):
+    return message.text
+
+
 @dp.message_handler(commands=['нахуй_сходи'])
 async def cmd_start(message: types.Message):
     await message.answer("Сходил")
@@ -169,16 +243,6 @@ async def cmd_start(message: types.Message):
 @dp.message_handler(commands=['блять'])
 async def cmd_start(message: types.Message):
     await message.answer("Согласен")
-
-
-@dp.message_handler(commands=['как_дела'])
-async def cmd_start(message: types.Message):
-    await message.answer("я хочу псж")
-
-
-@dp.message_handler()
-async def cmd_start(message: types.Message):
-    return message.text
 
 
 async def main():
