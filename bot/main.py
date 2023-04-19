@@ -6,6 +6,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand
+import random
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
@@ -28,6 +29,10 @@ class EventForm(StatesGroup):
 
 class CheckEventForm(StatesGroup):
     code_phrase = State()
+
+
+class BirdMailForm(StatesGroup):
+    letter = State()
 
 async def set_main_menu():
     await bot.set_my_commands([
@@ -180,6 +185,7 @@ async def check_event(message: types.Message):
         await message.answer("Введите кодовое слово")
     else:
         pass
+
 @dp.message_handler(state=CheckEventForm.code_phrase)
 async def process_phrase(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
@@ -197,6 +203,31 @@ async def process_phrase(message: types.Message, state: FSMContext):
     await state.finish()
 
 
+@dp.message_handler(commands=['bird_mail'])
+async def cmd_start(message: types.Message):
+    if message.chat.type == 'private':
+        await BirdMailForm.letter.set()
+        await message.answer("Напишите письмо!")
+    else:
+        pass
+
+@dp.message_handler(state=BirdMailForm.letter)
+async def process_phrase(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['letter'] = message.text
+        try:
+            u = User()
+            users = u.all_users()
+            user = random.choice(users)
+            while True:
+                if user.tg_id != message.from_user.id:
+                    await bot.send_message(user.tg_id, data['letter'])
+                    u.change_level_progress(message.from_user.id, 5)
+                    await message.answer("Сообщение отправлено, вы получили 5 зёрен.")
+                    break
+        except:
+            await message.answer(f"Что-то пошло не так...")
+    await state.finish()
 
 @dp.message_handler()
 async def cmd_start(message: types.Message):

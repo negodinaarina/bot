@@ -75,11 +75,15 @@ class User(Base):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        try:
-            user = session.get(User, tg_nickname=string)
-            return user
-        except:
-            return "Неверно введен ник, попробуйте снова"
+        return
+
+
+    def all_users(self):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        users = session.query(User).all()
+        return users
 
 
 class Comment(Base):
