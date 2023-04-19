@@ -54,6 +54,7 @@ async def process_name(message: types.Message, state: FSMContext):
     await bot.send_message(id, f"Имя сменено на {data['name']}")
     await state.finish()
 
+
 @dp.message_handler(commands=['reg'])
 async def reg_user(message: types.Message):
     if message.chat.type == 'private':
@@ -186,3 +187,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message):
+    await message.reply("Привет! Я бот, который поможет вашему коллективу сплотиться! Отправь /reg , чтобы зарегистрироваться для дальнейшего взаимодействия:)")
