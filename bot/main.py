@@ -226,9 +226,16 @@ async def process_phrase(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['bird_mail'])
 async def cmd_start(message: types.Message):
     if message.chat.type == 'private':
-        if
-        await BirdMailForm.letter.set()
-        await message.answer("Напишите письмо!")
+        u = User()
+        user = u.get_profile_data(message.from_user.id)
+        delta = datetime.datetime.now() - user.last_mail
+        if delta.days >= 1:
+            u.change_mail_date(message.from_user.id, datetime.datetime.now())
+            await BirdMailForm.letter.set()
+            await message.answer("Напишите письмо!")
+        else:
+            await message.answer("Вы уже писали письмо за последние сутки!")
+            return
     else:
         pass
 
