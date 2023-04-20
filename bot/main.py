@@ -37,13 +37,40 @@ class EventForm(StatesGroup):
     price = State()
     code_phrase = State()
     chat_id = State()
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    logging.info('Cancelling state %r', current_state)
+    await state.finish()
+    await message.answer('конец')
 
 class CheckEventForm(StatesGroup):
     code_phrase = State()
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    logging.info('Cancelling state %r', current_state)
+    await state.finish()
+    await message.answer('конец')
 
 
 class BirdMailForm(StatesGroup):
     letter = State()
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    logging.info('Cancelling state %r', current_state)
+    await state.finish()
+    await message.answer('конец')
 
 async def set_main_menu():
     await bot.set_my_commands([
@@ -107,15 +134,7 @@ async def get_level_info(message: types.Message):
 async def create_event(message: types.Message):
     await EventForm.title.set()
     await message.answer("Введите название мероприятия")
-@dp.message_handler(state='*', commands='cancel')
-@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-    logging.info('Cancelling state %r', current_state)
-    await state.finish()
-    await message.answer('конец')
+
 
 @dp.message_handler(state=EventForm.title)
 async def process_title(message: types.Message, state: FSMContext):
@@ -226,7 +245,6 @@ async def process_phrase(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['bird_mail'])
 async def cmd_start(message: types.Message):
     if message.chat.type == 'private':
-        if
         await BirdMailForm.letter.set()
         await message.answer("Напишите письмо!")
     else:
