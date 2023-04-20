@@ -2,6 +2,7 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types, executor
 from sql.models import User, Comment, Levels, Event, Chat
+from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -42,11 +43,6 @@ async def set_main_menu():
         BotCommand(command="/check_event", description="Отметить слёт")
     ])
 
-@dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message):
-    await message.answer("Блин вау ну все")
-
-
 @dp.message_handler(commands='edit_bird')
 async def edit_bird(message: types.Message):
     await Form.name.set()
@@ -79,6 +75,10 @@ async def reg_user(message: types.Message):
     else:
         return
 
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message):
+    await message.answer("Привет! Я бот, который поможет вашему коллективу сплотиться! Отправь /reg , чтобы зарегистрироваться для дальнейшего взаимодействия:)")
+
 @dp.message_handler(content_types=['text'], commands=['profile'])
 async def get_level_info(message: types.Message):
     if message.chat.type == 'private':
@@ -96,7 +96,15 @@ async def get_level_info(message: types.Message):
 async def create_event(message: types.Message):
     await EventForm.title.set()
     await message.answer("Введите название мероприятия")
-
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    logging.info('Cancelling state %r', current_state)
+    await state.finish()
+    await message.answer('конец')
 
 @dp.message_handler(state=EventForm.title)
 async def process_title(message: types.Message, state: FSMContext):
@@ -252,6 +260,3 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 
-@dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message):
-    await message.reply("Привет! Я бот, который поможет вашему коллективу сплотиться! Отправь /reg , чтобы зарегистрироваться для дальнейшего взаимодействия:)")
