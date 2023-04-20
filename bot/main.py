@@ -16,6 +16,15 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 
 class Form(StatesGroup):
     name = State()
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    logging.info('Cancelling state %r', current_state)
+    await state.finish()
+    await message.answer('конец')
 
 
 class EventForm(StatesGroup):
