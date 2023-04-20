@@ -8,6 +8,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 import random
+import datetime
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
@@ -50,6 +51,7 @@ async def set_main_menu():
         BotCommand(command="/profile", description="Просмотреть профиль"),
         BotCommand(command="/create_event", description="Создать слёт"),
         BotCommand(command="/check_event", description="Отметить слёт")
+
     ])
 
 @dp.message_handler(commands='edit_bird')
@@ -224,6 +226,7 @@ async def process_phrase(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['bird_mail'])
 async def cmd_start(message: types.Message):
     if message.chat.type == 'private':
+        if
         await BirdMailForm.letter.set()
         await message.answer("Напишите письмо!")
     else:

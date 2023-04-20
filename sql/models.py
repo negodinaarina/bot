@@ -18,6 +18,7 @@ class User(Base):
     level_progress = Column(Integer)
     task_completed = Column(Boolean)
     task_id = Column(Integer)
+    last_mail = Column(DateTime)
 
 
     def add_user(self, id, nickname):
@@ -84,6 +85,14 @@ class User(Base):
         session = Session()
         users = session.query(User).all()
         return users
+
+    def change_mail_date(self, id, date):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        user = session.get(User, id)
+        user.last_mail = date
+        session.commit()
 
 
 class Comment(Base):
