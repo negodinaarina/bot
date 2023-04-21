@@ -1,7 +1,7 @@
 from sqlalchemy import URL, create_engine, Table
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
-from datetime import datetime
+import datetime
 
 
 engine = create_engine("sqlite:///bot.db")
@@ -19,17 +19,34 @@ class User(Base):
     task_completed = Column(Boolean)
     task_id = Column(Integer)
     last_mail = Column(DateTime)
+    admin = Column(Boolean)
 
 
     def add_user(self, id, nickname):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
+        yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
         user = User(tg_id=id, tg_nickname=nickname, level=1, level_progress=0, task_id=None, task_completed=None,
-                        bird_name="ПТИЦА")
+                        bird_name="ПТИЦА", admin=False, last_mail=yesterday)
         session.add(user)
         session.commit()
 
+
+    def is_admin(self, id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        user = session.get(User, id)
+        return user.admin
+
+    def change_status(self, id, status):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        user = session.get(User, id)
+        user.admin = status
+        session.commit()
 
     def if_exists(self, id):
         Session = sessionmaker()

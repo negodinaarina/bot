@@ -41,6 +41,8 @@ class EventForm(StatesGroup):
 class CheckEventForm(StatesGroup):
     code_phrase = State()
 
+class AdminSigninForm(StatesGroup):
+    password = State()
 
 class BirdMailForm(StatesGroup):
     letter = State()
@@ -50,14 +52,16 @@ async def set_main_menu():
         BotCommand(command="/edit_bird", description="Изменить имя птицы"),
         BotCommand(command="/profile", description="Просмотреть профиль"),
         BotCommand(command="/create_event", description="Создать слёт"),
-        BotCommand(command="/check_event", description="Отметить слёт")
-
+        BotCommand(command="/check_event", description="Отметить слёт"),
+        BotCommand(command="/bird_mail", description="Отправить письмо"),
+        BotCommand(command="/admin_signin", description="Вход для админа")
     ])
 
 @dp.message_handler(commands='edit_bird')
 async def edit_bird(message: types.Message):
-    await Form.name.set()
-    await message.answer("Как вы хотите назвать птицу?")
+    if User().if_exists(message.from_user.id) and message.chat.type == "private":
+        await Form.name.set()
+        await message.answer("Как вы хотите назвать птицу?")
 
 
 @dp.message_handler(state=Form.name)
@@ -92,7 +96,7 @@ async def cmd_start(message: types.Message):
 
 @dp.message_handler(content_types=['text'], commands=['profile'])
 async def get_level_info(message: types.Message):
-    if message.chat.type == 'private':
+    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
         id = message.from_user.id
         user = User().get_profile_data(id)
         l = Levels()
@@ -105,8 +109,9 @@ async def get_level_info(message: types.Message):
 
 @dp.message_handler(commands=['create_event'])
 async def create_event(message: types.Message):
-    await EventForm.title.set()
-    await message.answer("Введите название мероприятия")
+    if User().if_exists(message.from_user.id) and User().is_admin(message.from_user.id):
+        await EventForm.title.set()
+        await message.answer("Введите название мероприятия")
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
@@ -200,7 +205,7 @@ async def cmd_reg_chat(message: types.Message):
 
 @dp.message_handler(commands=['check_event'])
 async def check_event(message: types.Message):
-    if message.chat.type == 'private':
+    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
         await CheckEventForm.code_phrase.set()
         await message.answer("Введите кодовое слово")
     else:
@@ -225,7 +230,7 @@ async def process_phrase(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['bird_mail'])
 async def cmd_start(message: types.Message):
-    if message.chat.type == 'private':
+    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
         u = User()
         user = u.get_profile_data(message.from_user.id)
         delta = datetime.datetime.now() - user.last_mail
@@ -262,9 +267,24 @@ async def cmd_start(message: types.Message):
     return message.text
 
 
-@dp.message_handler(commands=['нахуй_сходи'])
-async def cmd_start(message: types.Message):
-    await message.answer("Сходил")
+@dp.message_handler(commands=['a'])
+async def admin_signin(message: types.Message):
+    # if User().if_exists(message.from_user.id) and message.chat.type == "private":
+    #     await AdminSigninForm.password.set()
+    await message.answer("Введите пароль")
+    # else:
+    #     await message.answer('Вас нет!')
+
+
+@dp.message_handler(state=AdminSigninForm.password)
+async def process_password(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['password'] = message.text
+        if data['password'] == 'password':
+            User().change_status(message.from_user.id, True)
+    await message.answer("Статус сменен!")
+    await state.finish()
+
 
 
 @dp.message_handler(commands=['блять'])
