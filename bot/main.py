@@ -48,9 +48,14 @@ class BirdMailForm(StatesGroup):
 
 @dp.message_handler(commands='edit_bird')
 async def edit_bird(message: types.Message):
-    if User().if_exists(message.from_user.id) and message.chat.type == "private":
-        await Form.name.set()
-        await message.answer("Как вы хотите назвать птицу?")
+    if User().if_exists(message.from_user.id):
+        if message.chat.type == "private":
+            await Form.name.set()
+            await message.answer("Как вы хотите назвать птицу?")
+        else: return
+    else:
+        await message.answer("Сначала - регистрация!")
+
 
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
@@ -102,19 +107,22 @@ async def get_level_info(message: types.Message):
         bird = l.get_bird_data(level)
         photo = InputFile(f"{bird.img_path}")
         msg = f"Ваша птица - {bird.bird_name}🐤\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
-        # await message.answer(msg)
         await bot.send_photo(message.from_user.id, photo,
                              caption=msg,
                              reply_to_message_id=message.message_id)
-
     else:
-        return
+        await message.answer("Профиль не найден...")
 
 @dp.message_handler(commands=['create_event'])
 async def create_event(message: types.Message):
-    if User().if_exists(message.from_user.id) and User().is_admin(message.from_user.id):
-        await EventForm.title.set()
-        await message.answer("Введите название мероприятия")
+    if User().if_exists(message.from_user.id):
+        if User().is_admin(message.from_user.id):
+            await EventForm.title.set()
+            await message.answer("Введите название мероприятия")
+        else:
+            await message.answer("Вы не птица-админ!")
+    else:
+        await message.answer("Сначала нужно зарегаться!")
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
@@ -166,10 +174,12 @@ async def process_place(message: types.Message, state: FSMContext):
 @dp.message_handler(state=EventForm.price)
 async def process_price(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data['price'] = int(message.text)
-    await EventForm.next()
-    await message.answer("Введите кодовое слово")
-
+        try:
+            data['price'] = int(message.text)
+            await EventForm.next()
+            await message.answer("Введите кодовое слово")
+        except:
+            await message.answer("Неверный формат, попробуйте снова!")
 
 @dp.message_handler(state=EventForm.code_phrase)
 async def process_phrase(message: types.Message, state: FSMContext):
@@ -208,11 +218,13 @@ async def cmd_reg_chat(message: types.Message):
 
 @dp.message_handler(commands=['check_event'])
 async def check_event(message: types.Message):
-    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
-        await CheckEventForm.code_phrase.set()
-        await message.answer("Введите кодовое слово")
-    else:
-        pass
+    if message.chat.type == 'private':
+        if User().if_exists(message.from_user.id):
+            await CheckEventForm.code_phrase.set()
+            await message.answer("Введите кодовое слово")
+        else:
+            await message.answer("ЗАРЕГАЙСЯ!")
+
 
 @dp.message_handler(state=CheckEventForm.code_phrase)
 async def process_phrase(message: types.Message, state: FSMContext):
@@ -233,19 +245,21 @@ async def process_phrase(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['bird_mail'])
 async def cmd_start(message: types.Message):
-    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
-        u = User()
-        user = u.get_profile_data(message.from_user.id)
-        delta = datetime.datetime.now() - user.last_mail
-        if delta.days >= 1:
-            u.change_mail_date(message.from_user.id, datetime.datetime.now())
-            await BirdMailForm.letter.set()
-            await message.answer("Напишите письмо!")
+    if message.chat.type == 'private':
+        if User().if_exists(message.from_user.id):
+            u = User()
+            user = u.get_profile_data(message.from_user.id)
+            delta = datetime.datetime.now() - user.last_mail
+            if delta.days >= 1:
+                u.change_mail_date(message.from_user.id, datetime.datetime.now())
+                await BirdMailForm.letter.set()
+                await message.answer("Напишите письмо!")
+            else:
+                await message.answer("Вы уже писали письмо за последние сутки!")
+                return
         else:
-            await message.answer("Вы уже писали письмо за последние сутки!")
-            return
-    else:
-        pass
+            await message.answer("Вы не можете пользоваться птичьей почтой до регистрации!")
+
 
 @dp.message_handler(state=BirdMailForm.letter)
 async def process_phrase(message: types.Message, state: FSMContext):
