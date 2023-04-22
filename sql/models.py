@@ -112,42 +112,6 @@ class User(Base):
         session.commit()
 
 
-class Comment(Base):
-    __tablename__ = "comments"
-    id = Column(Integer, primary_key=True)
-    sender_id = Column(Integer)
-    recipient_id = Column(Integer)
-    text = Column(Text)
-    rating = Column(Integer)
-
-
-    @staticmethod
-    def add_comment(sender_id, recipient_id):
-        Session = sessionmaker()
-        Session.configure(bind=engine)
-        session = Session()
-        comment = Comment(sender_id=sender_id, recipient_id=recipient_id, text=None, rating=None)
-        session.add(comment)
-        session.commit()
-
-    @staticmethod
-    def edit_text(id, text):
-        Session = sessionmaker()
-        Session.configure(bind=engine)
-        session = Session()
-        comment = session.get(Comment, id=id)
-        comment.text = text
-        session.commit()
-
-    @staticmethod
-    def rate_comment(id, rating):
-        Session = sessionmaker()
-        Session.configure(bind=engine)
-        session = Session()
-        comment = session.get(Comment, id)
-        comment.rating = rating
-        session.commit()
-
 class Levels(Base):
     __tablename__ = "birds"
     id = Column(Integer, primary_key=True)
@@ -221,6 +185,29 @@ class Chat(Base):
         chat = session.query(Chat).filter_by(chat_name=title).first()
         return chat
 
+class Attendance(Base):
+    __tablename__ = "attendance"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String)
+    event_id = Column(Integer)
+
+    def get_attendance(self, user_id, event_id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        attend = session.query(Attendance).filter_by(user_id=user_id, event_id=event_id).first()
+        if attend is None:
+            return False
+        else:
+            return True
+
+    def add_attendance(self, user_id, event_id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        attend = Attendance(user_id=user_id, event_id=event_id)
+        session.add(attend)
+        session.commit()
 
 
 Base.metadata.create_all(engine)

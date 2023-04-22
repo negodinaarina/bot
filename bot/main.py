@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types, executor
-from sql.models import User, Comment, Levels, Event, Chat
+from sql.models import User, Levels, Event, Chat, Attendance
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
@@ -37,14 +37,15 @@ class AdminSigninForm(StatesGroup):
 class BirdMailForm(StatesGroup):
     letter = State()
 
-# async def set_main_menu():
-#     await bot.set_my_commands([
-#         BotCommand(command="/edit_bird", description="Изменить имя птицы"),
-#         BotCommand(command="/profile", description="Просмотреть профиль"),
-#         BotCommand(command="/create_event", description="Создать слёт"),
-#         BotCommand(command="/check_event", description="Отметить слёт"),
-#         BotCommand(command="/bird_mail", description="Отправить письмо")
-#     ])
+async def set_main_menu():
+    await bot.set_my_commands([
+        BotCommand(command="/edit_bird", description="Изменить имя птицы"),
+        BotCommand(command="/profile", description="Просмотреть профиль"),
+        BotCommand(command="/create_event", description="Создать слёт"),
+        BotCommand(command="/check_event", description="Отметить слёт"),
+        BotCommand(command="/bird_mail", description="Отправить письмо"),
+        BotCommand(command="/a", description="Секретный секрет")
+    ])
 
 @dp.message_handler(commands='edit_bird')
 async def edit_bird(message: types.Message):
@@ -95,7 +96,9 @@ async def reg_user(message: types.Message):
 
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я бот, который поможет вашему коллективу сплотиться! Отправь /reg , чтобы зарегистрироваться для дальнейшего взаимодействия:)")
+    if message.chat.type == 'private':
+        await set_main_menu()
+        await message.answer("Привет! Я бот, который поможет вашему коллективу сплотиться! Отправь /reg , чтобы зарегистрироваться для дальнейшего взаимодействия:)")
 
 @dp.message_handler(content_types=['text'], commands=['profile'])
 async def get_level_info(message: types.Message):
@@ -186,13 +189,16 @@ async def process_phrase(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['code_phrase'] = message.text
         event = Event()
-        event.create_event(data['title'], data['description'], data['date'], data['time'], data['place'], data['price'], data['code_phrase'])
-    await EventForm().next()
-    chats = Chat.get_all_chats()
-    choice = ''
-    for chat in chats:
-        choice += f"{chat.chat_name}\n"
-    await message.answer(f"Выберите чат:\n{choice}")
+        if event.get_event(data['code_phrase']) == None:
+            event.create_event(data['title'], data['description'], data['date'], data['time'], data['place'], data['price'], data['code_phrase'])
+            await EventForm().next()
+            chats = Chat.get_all_chats()
+            choice = ''
+            for chat in chats:
+                choice += f"{chat.chat_name}\n"
+            await message.answer(f"Выберите чат:\n{choice}")
+        else:
+            await message.answer("Такое кодовое слово уже существует, попробуйте снова!")
 
 
 @dp.message_handler(state=EventForm.chat_id)
@@ -236,8 +242,14 @@ async def process_phrase(message: types.Message, state: FSMContext):
             points = event.price
             id = message.from_user.id
             user = User().get_profile_data(id)
-            user.change_level_progress(id, points)
-            await message.answer(f"Мероприятие отмечено, вы получили  {points} зерен!")
+            a = Attendance()
+            attendance = a.get_attendance(id, event.id)
+            if attendance:
+                await message.answer("Вы уже отметились на данное мероприятие!")
+            else:
+                a.add_attendance(id, event.id)
+                user.change_level_progress(id, points)
+                await message.answer(f"Мероприятие отмечено, вы получили  {points} зерен!")
         except:
             await message.answer(f"Мероприятие не найдено...")
     await state.finish()
@@ -302,7 +314,6 @@ async def process_password(message: types.Message, state: FSMContext):
 
 
 async def main():
-    # await set_main_menu()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
