@@ -17,16 +17,6 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 
 class Form(StatesGroup):
     name = State()
-@dp.message_handler(state='*', commands='cancel')
-@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-    logging.info('Cancelling state %r', current_state)
-    await state.finish()
-    await message.answer('конец')
-
 
 class EventForm(StatesGroup):
     title = State()
@@ -47,15 +37,14 @@ class AdminSigninForm(StatesGroup):
 class BirdMailForm(StatesGroup):
     letter = State()
 
-async def set_main_menu():
-    await bot.set_my_commands([
-        BotCommand(command="/edit_bird", description="Изменить имя птицы"),
-        BotCommand(command="/profile", description="Просмотреть профиль"),
-        BotCommand(command="/create_event", description="Создать слёт"),
-        BotCommand(command="/check_event", description="Отметить слёт"),
-        BotCommand(command="/bird_mail", description="Отправить письмо"),
-        BotCommand(command="/a", description="Вход для админа")
-    ])
+# async def set_main_menu():
+#     await bot.set_my_commands([
+#         BotCommand(command="/edit_bird", description="Изменить имя птицы"),
+#         BotCommand(command="/profile", description="Просмотреть профиль"),
+#         BotCommand(command="/create_event", description="Создать слёт"),
+#         BotCommand(command="/check_event", description="Отметить слёт"),
+#         BotCommand(command="/bird_mail", description="Отправить письмо")
+#     ])
 
 @dp.message_handler(commands='edit_bird')
 async def edit_bird(message: types.Message):
@@ -63,6 +52,15 @@ async def edit_bird(message: types.Message):
         await Form.name.set()
         await message.answer("Как вы хотите назвать птицу?")
 
+@dp.message_handler(state='*', commands='cancel')
+@dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    logging.info('Cancelling state %r', current_state)
+    await state.finish()
+    await message.answer('конец')
 
 @dp.message_handler(state=Form.name)
 async def process_name(message: types.Message, state: FSMContext):
@@ -262,18 +260,14 @@ async def process_phrase(message: types.Message, state: FSMContext):
             await message.answer(f"Что-то пошло не так...")
     await state.finish()
 
-@dp.message_handler()
-async def cmd_start(message: types.Message):
-    return message.text
-
 
 @dp.message_handler(commands=['a'])
 async def admin_signin(message: types.Message):
-    # if User().if_exists(message.from_user.id) and message.chat.type == "private":
-    #     await AdminSigninForm.password.set()
-    await message.answer("Введите пароль")
-    # else:
-    #     await message.answer('Вас нет!')
+    if User().if_exists(message.from_user.id) and message.chat.type == "private":
+        await AdminSigninForm.password.set()
+        await message.answer("Введите пароль")
+    else:
+        await message.answer('Вас нет!')
 
 
 @dp.message_handler(state=AdminSigninForm.password)
@@ -282,18 +276,14 @@ async def process_password(message: types.Message, state: FSMContext):
         data['password'] = message.text
         if data['password'] == 'password':
             User().change_status(message.from_user.id, True)
-    await message.answer("Статус сменен!")
+            await message.answer("Статус сменен!")
+        else:
+            await message.answer("Неверный пароль")
     await state.finish()
 
 
-
-@dp.message_handler(commands=['блять'])
-async def cmd_start(message: types.Message):
-    await message.answer("Согласен")
-
-
 async def main():
-    await set_main_menu()
+    # await set_main_menu()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
