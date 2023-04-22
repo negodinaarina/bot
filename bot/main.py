@@ -54,7 +54,7 @@ async def set_main_menu():
         BotCommand(command="/create_event", description="Создать слёт"),
         BotCommand(command="/check_event", description="Отметить слёт"),
         BotCommand(command="/bird_mail", description="Отправить письмо"),
-        BotCommand(command="/admin_signin", description="Вход для админа")
+        BotCommand(command="/a", description="Вход для админа")
     ])
 
 @dp.message_handler(commands='edit_bird')
