@@ -6,7 +6,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, InputFile
 import random
 import datetime
 
@@ -100,8 +100,13 @@ async def get_level_info(message: types.Message):
         l = Levels()
         level = User().get_profile_data(id).level
         bird = l.get_bird_data(level)
+        photo = InputFile(f"{bird.img_path}")
         msg = f"Ваша птица - {bird.bird_name}🐤\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
-        await message.answer(msg)
+        # await message.answer(msg)
+        await bot.send_photo(message.from_user.id, photo,
+                             caption=msg,
+                             reply_to_message_id=message.message_id)
+
     else:
         return
 

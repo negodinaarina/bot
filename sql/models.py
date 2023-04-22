@@ -156,6 +156,7 @@ class Levels(Base):
     bird_task = Column(Text)
     bird_name = Column(Text)
     bird_level = Column(Integer)
+    img_path =Column(String)
 
     def get_bird_data(self, level):
         Session = sessionmaker()
