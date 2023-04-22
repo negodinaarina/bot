@@ -16,8 +16,6 @@ class User(Base):
     bird_name = Column(String)
     level = Column(Integer)
     level_progress = Column(Integer)
-    task_completed = Column(Boolean)
-    task_id = Column(Integer)
     last_mail = Column(DateTime)
     admin = Column(Boolean)
 

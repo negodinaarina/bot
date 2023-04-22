@@ -283,7 +283,7 @@ async def process_phrase(message: types.Message, state: FSMContext):
             while True:
                 user = random.choice(users)
                 if user.tg_id != message.from_user.id:
-                    await bot.send_message(user.tg_id, f"Вам пришлописьмо по птичьей почте:\n{data['letter']}")
+                    await bot.send_message(user.tg_id, f"Вам пришло письмо по птичьей почте:\n\n{data['letter']}")
                     u.change_level_progress(message.from_user.id, 5)
                     await message.answer("Сообщение отправлено, вы получили 5 зёрен.")
                     break
