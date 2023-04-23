@@ -17,6 +17,7 @@ class User(Base):
     level = Column(Integer)
     level_progress = Column(Integer)
     last_mail = Column(DateTime)
+    last_fact = Column(Integer)
     admin = Column(Boolean)
 
 
@@ -26,7 +27,7 @@ class User(Base):
         session = Session()
         yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
         user = User(tg_id=id, tg_nickname=nickname, level=1, level_progress=0,
-                        bird_name="ПТИЦА", admin=False, last_mail=yesterday)
+                        bird_name="ПТИЦА", admin=False, last_mail=yesterday, last_fact=0)
         session.add(user)
         session.commit()
 
@@ -115,7 +116,6 @@ class Levels(Base):
     id = Column(Integer, primary_key=True)
     bird_feature = Column(Text)
     bird_description = Column(Text)
-    bird_task = Column(Text)
     bird_name = Column(Text)
     bird_level = Column(Integer)
     img_path =Column(String)
@@ -206,6 +206,31 @@ class Attendance(Base):
         attend = Attendance(user_id=user_id, event_id=event_id)
         session.add(attend)
         session.commit()
+
+
+class Facts(Base):
+    __tablename__="facts"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String)
+    user_name = Column(String)
+    fact = Column(Text)
+    is_true = Column(Boolean)
+
+    def add_fact(self, user_id, user_name, fact, is_true):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        fact = Facts(user_id=user_id, user_name=user_name, fact=fact, is_true=is_true)
+        session.add(fact)
+        session.commit()
+
+
+    def get_fact(self, id):
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        session = Session()
+        fact = session.query(Facts).filter(user_id!= id).first()
+        return fact
 
 
 Base.metadata.create_all(engine)

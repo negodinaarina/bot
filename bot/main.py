@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types, executor
-from sql.models import User, Levels, Event, Chat, Attendance
+from sql.models import User, Levels, Event, Chat, Attendance, Facts
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
@@ -12,9 +12,6 @@ import datetime, os
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
 dp = Dispatcher(bot, storage=MemoryStorage())
-
-user_path = os.path.abspath('images/chayka.jpg')
-print(user_path)
 
 class Form(StatesGroup):
     name = State()
@@ -38,6 +35,11 @@ class AdminSigninForm(StatesGroup):
 class BirdMailForm(StatesGroup):
     letter = State()
 
+class FactForm(StatesGroup):
+    is_true = State()
+    fact = State()
+
+
 async def set_main_menu():
     await bot.set_my_commands([
         BotCommand(command="/edit_bird", description="Изменить имя птицы"),
@@ -45,6 +47,7 @@ async def set_main_menu():
         BotCommand(command="/create_event", description="Создать слёт"),
         BotCommand(command="/check_event", description="Отметить слёт"),
         BotCommand(command="/bird_mail", description="Отправить письмо"),
+        BotCommand(command="/add_fact", description="Добавить факт о себе"),
         BotCommand(command="/a", description="Секретный секрет")
     ])
 
@@ -292,6 +295,41 @@ async def process_phrase(message: types.Message, state: FSMContext):
         except:
             await message.answer(f"Что-то пошло не так...")
     await state.finish()
+
+
+@dp.message_handler(commands=['add_fact'])
+async def cmd_start(message: types.Message):
+    if message.chat.type == 'private':
+        if User().if_exists(message.from_user.id):
+            u = User()
+            user = u.get_profile_data(message.from_user.id)
+            await FactForm.is_true.set()
+            await message.answer("Введите тип факта: правда/ложь")
+        else:
+            await message.answer("ЗАРЕГАЙСЯ!")
+
+
+
+@dp.message_handler(state=FactForm.is_true)
+async def process_phrase(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['is_true'] = message.text
+        await FactForm.next()
+        await message.answer("Введите факт")
+
+@dp.message_handler(state=FactForm.fact)
+async def process_phrase(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['fact'] = message.text
+        fact = Facts()
+        if data['is_true']:
+            is_true = True
+        else:
+            is_true = False
+        fact.add_fact(message.from_user.id, message.from_user.full_name, data['fact'], is_true)
+    await message.answer("Факт добавлен в копилку викторины!")
+    await state.finish()
+
 
 
 @dp.message_handler(commands=['a'])
