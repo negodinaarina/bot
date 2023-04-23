@@ -3,41 +3,15 @@ import logging
 from aiogram import Bot, Dispatcher, types, executor
 from sql.models import User, Levels, Event, Chat, Attendance, Facts
 from aiogram.dispatcher.filters import Text
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand, InputFile
 import random
 import datetime, os
+from forms import Form, FactForm, EventForm, CheckEventForm, BirdMailForm, AdminSigninForm
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
 dp = Dispatcher(bot, storage=MemoryStorage())
-
-class Form(StatesGroup):
-    name = State()
-
-class EventForm(StatesGroup):
-    title = State()
-    description = State()
-    date = State()
-    time = State()
-    place = State()
-    price = State()
-    code_phrase = State()
-    chat_id = State()
-
-class CheckEventForm(StatesGroup):
-    code_phrase = State()
-
-class AdminSigninForm(StatesGroup):
-    password = State()
-
-class BirdMailForm(StatesGroup):
-    letter = State()
-
-class FactForm(StatesGroup):
-    is_true = State()
-    fact = State()
 
 
 async def set_main_menu():
