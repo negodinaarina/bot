@@ -1,13 +1,10 @@
-import asyncio
-import logging
+import asyncio, logging, random, datetime, os, kb
 from aiogram import Bot, Dispatcher, types, executor
 from sql.models import User, Levels, Event, Chat, Attendance, Facts
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand, InputFile
-import random
-import datetime, os
 from forms import Form, FactForm, EventForm, CheckEventForm, BirdMailForm, AdminSigninForm
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
@@ -303,6 +300,19 @@ async def process_phrase(message: types.Message, state: FSMContext):
         fact.add_fact(message.from_user.id, message.from_user.full_name, data['fact'], is_true)
     await message.answer("Факт добавлен в копилку викторины!")
     await state.finish()
+
+@dp.message_handler(commands=['play_facts'])
+async def play_facts(message: types.Message):
+    u = User()
+    user = u.get_profile_data(message.from_user.id)
+    f = Facts()
+    fact = f.get_fact(user.tg_id, user.last_fact)
+    await message.answer(f"ФАКТ:\n\n{fact.fact}\nОТ:{fact.user_name}", reply_markup=kb.inline_kb_full)
+
+@dp.callback_query_handler(lambda c: c.data == 'pressed_true')
+async def process_callback_button1(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    await bot.send_message(callback_query.from_user.id, 'Нажата первая кнопка!')
 
 
 

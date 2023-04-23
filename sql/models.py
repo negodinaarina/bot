@@ -225,11 +225,11 @@ class Facts(Base):
         session.commit()
 
 
-    def get_fact(self, id):
+    def get_fact(self, id, fact_num):
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()
-        fact = session.query(Facts).filter(user_id!= id).first()
+        fact = session.query(Facts).filter(Facts.user_id != id, Facts.id > fact_num).first()
         return fact
 
 
