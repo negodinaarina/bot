@@ -8,12 +8,13 @@ from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand, InputFile
 import random
-import datetime
-
+import datetime, os
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
 dp = Dispatcher(bot, storage=MemoryStorage())
 
+user_path = os.path.abspath('images/chayka.jpg')
+print(user_path)
 
 class Form(StatesGroup):
     name = State()
@@ -108,7 +109,8 @@ async def get_level_info(message: types.Message):
         l = Levels()
         level = User().get_profile_data(id).level
         bird = l.get_bird_data(level)
-        photo = InputFile(f"{bird.img_path}")
+        usr_path=os.path.abspath('images')[:-11]
+        photo = InputFile(f"{usr_path}{bird.img_path}")
         msg = f"Ваша птица - {bird.bird_name}🐤\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
         await bot.send_photo(message.from_user.id, photo,
                              caption=msg,

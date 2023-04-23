@@ -25,7 +25,7 @@ class User(Base):
         Session.configure(bind=engine)
         session = Session()
         yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-        user = User(tg_id=id, tg_nickname=nickname, level=1, level_progress=0, task_id=None, task_completed=None,
+        user = User(tg_id=id, tg_nickname=nickname, level=1, level_progress=0,
                         bird_name="ПТИЦА", admin=False, last_mail=yesterday)
         session.add(user)
         session.commit()
