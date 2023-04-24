@@ -41,7 +41,7 @@ async def cancel_handler(message: types.Message, state: FSMContext):
         return
     logging.info('Cancelling state %r', current_state)
     await state.finish()
-    await message.answer('конец')
+    await message.answer('Действие отменено')
 
 @dp.message_handler(state=Form.name)
 async def process_name(message: types.Message, state: FSMContext):
@@ -61,10 +61,10 @@ async def reg_user(message: types.Message):
         id = message.from_user.id
         user = User()
         if user.if_exists(id):
-            await message.answer("Ты ху?й")
+            await message.answer("Вы уже зарегистрированы!")
         else:
             user.add_user(id=id, nickname=nickname)
-            await message.answer("Вы успешно зарегались!")
+            await message.answer("Вы успешно зарегистрировались!")
             await get_level_info(message)
     else:
         return
@@ -99,9 +99,9 @@ async def create_event(message: types.Message):
             await EventForm.title.set()
             await message.answer("Введите название мероприятия")
         else:
-            await message.answer("Вы не птица-админ!")
+            await message.answer("Вы не являетесь птицей-админом!")
     else:
-        await message.answer("Сначала нужно зарегаться!")
+        await message.answer("Сначала нужно зарегистрироваться!")
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
@@ -110,7 +110,7 @@ async def cancel_handler(message: types.Message, state: FSMContext):
         return
     logging.info('Cancelling state %r', current_state)
     await state.finish()
-    await message.answer('конец')
+    await message.answer('Отмена действия')
 
 @dp.message_handler(state=EventForm.title)
 async def process_title(message: types.Message, state: FSMContext):
@@ -205,7 +205,7 @@ async def check_event(message: types.Message):
             await CheckEventForm.code_phrase.set()
             await message.answer("Введите кодовое слово")
         else:
-            await message.answer("ЗАРЕГАЙСЯ!")
+            await message.answer("Необходима регистрация!")
 
 
 @dp.message_handler(state=CheckEventForm.code_phrase)
@@ -225,7 +225,7 @@ async def process_phrase(message: types.Message, state: FSMContext):
             else:
                 a.add_attendance(id, event.id)
                 user.change_level_progress(id, points)
-                await message.answer(f"Мероприятие отмечено, вы получили  {points} зерен!")
+                await message.answer(f"Мероприятие отмечено. Зерен получено: {points} ")
         except:
             await message.answer(f"Мероприятие не найдено...")
     await state.finish()
@@ -277,7 +277,7 @@ async def cmd_start(message: types.Message):
             await FactForm.is_true.set()
             await message.answer("Введите тип факта: правда/ложь")
         else:
-            await message.answer("ЗАРЕГАЙСЯ!")
+            await message.answer("Зарегистрируйтесь!")
 
 
 
@@ -286,7 +286,7 @@ async def process_phrase(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['is_true'] = message.text
         await FactForm.next()
-        await message.answer("Введите факт")
+        await message.answer("Введите факт о себе")
 
 @dp.message_handler(state=FactForm.fact)
 async def process_phrase(message: types.Message, state: FSMContext):
