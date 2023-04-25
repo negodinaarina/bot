@@ -7,7 +7,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand, InputFile
 from forms import Form, FactForm, EventForm, CheckEventForm, BirdMailForm, AdminSigninForm
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token="5899970158:AAEB_hBtdbQs4Izpv3foYmrIkARntrJZ6ug")
+bot = Bot(token="6178498873:AAHb-vf_yWBanGlFRh-WVMWVysaWAYoEFBg")
 dp = Dispatcher(bot, storage=MemoryStorage())
 
 
@@ -19,6 +19,7 @@ async def set_main_menu():
         BotCommand(command="/check_event", description="Отметить слёт"),
         BotCommand(command="/bird_mail", description="Отправить письмо"),
         BotCommand(command="/add_fact", description="Добавить факт о себе"),
+        BotCommand(command="/play_facts", description="Играть в факты"),
         BotCommand(command="/a", description="Секретный секрет")
     ])
 
@@ -77,20 +78,21 @@ async def cmd_start(message: types.Message):
 
 @dp.message_handler(content_types=['text'], commands=['profile'])
 async def get_level_info(message: types.Message):
-    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
-        id = message.from_user.id
-        user = User().get_profile_data(id)
-        l = Levels()
-        level = User().get_profile_data(id).level
-        bird = l.get_bird_data(level)
-        usr_path=os.path.abspath('images')[:-11]
-        photo = InputFile(f"{usr_path}{bird.img_path}")
-        msg = f"Ваша птица - {bird.bird_name}🐤\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100"
-        await bot.send_photo(message.from_user.id, photo,
-                             caption=msg,
-                             reply_to_message_id=message.message_id)
-    else:
-        await message.answer("Профиль не найден...")
+    if message.chat.type == 'private':
+        if User().if_exists(message.from_user.id):
+            id = message.from_user.id
+            user = User().get_profile_data(id)
+            l = Levels()
+            level = User().get_profile_data(id).level
+            bird = l.get_bird_data(level)
+            usr_path=os.path.abspath('images')[:-11]
+            photo = InputFile(f"{usr_path}{bird.img_path}")
+            msg = f"Ваша птица - {bird.bird_name}\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100 зёрен."
+            await bot.send_photo(message.from_user.id, photo,
+                                 caption=msg,
+                                 reply_to_message_id=message.message_id)
+        else:
+            await message.answer("Профиль не найден...")
 
 @dp.message_handler(commands=['create_event'])
 async def create_event(message: types.Message):
@@ -285,15 +287,17 @@ async def cmd_start(message: types.Message):
 async def process_phrase(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['is_true'] = message.text
-        await FactForm.next()
-        await message.answer("Введите факт о себе")
+        if data['is_true'] in ['правда', 'ложь', 'Правда', 'Ложь']:
+            await FactForm.next()
+            await message.answer("Введите факт о себе")
+        else: await message.answer("Неверный формат типа факта, попробуйте еще раз!")
 
 @dp.message_handler(state=FactForm.fact)
 async def process_phrase(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['fact'] = message.text
         fact = Facts()
-        if data['is_true']:
+        if data['is_true'] == 'правда':
             is_true = True
         else:
             is_true = False
@@ -303,17 +307,53 @@ async def process_phrase(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['play_facts'])
 async def play_facts(message: types.Message):
-    u = User()
-    user = u.get_profile_data(message.from_user.id)
-    f = Facts()
-    fact = f.get_fact(user.tg_id, user.last_fact)
-    await message.answer(f"ФАКТ:\n\n{fact.fact}\nОТ:{fact.user_name}", reply_markup=kb.inline_kb_full)
+    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
+        u = User()
+        user = u.get_profile_data(message.from_user.id)
+        f = Facts()
+        fact = f.get_fact(user.tg_id, user.last_fact)
+        if fact is not None:
+            await message.answer(f"ФАКТ:\n{fact.fact}\nОТ:{fact.user_name}", reply_markup=kb.inline_kb_full)
+        else: await message.answer("Факты закончились.... Подождите, пока кто-нибудь не расскажет о себе!")
 
 @dp.callback_query_handler(lambda c: c.data == 'pressed_true')
 async def process_callback_button1(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
-    await bot.send_message(callback_query.from_user.id, 'Нажата первая кнопка!')
+    f = Facts()
+    u = User()
+    user = u.get_profile_data(callback_query.from_user.id)
+    fact = f.get_fact(user.tg_id, user.last_fact)
+    # new_fact = f.get_fact(user.tg_id, fact.id)
+    if fact.is_true:
+        await bot.send_message(callback_query.from_user.id, 'Правильный ответ!')
+        u.change_level_progress(callback_query.from_user.id, 5)
+    else:
+        await bot.send_message(callback_query.from_user.id, 'К сожалению,не верно...')
+    try:
+        user.change_last_fact(callback_query.from_user.id, fact.id+1)
+    except AttributeError:
+        pass
 
+
+@dp.callback_query_handler(lambda c: c.data == 'pressed_false')
+async def process_callback_button2(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    f = Facts()
+    u = User()
+    user = u.get_profile_data(callback_query.from_user.id)
+    fact = f.get_fact(user.tg_id, user.last_fact)
+    if not fact.is_true:
+        await bot.send_message(callback_query.from_user.id, 'Правильный ответ!')
+        u.change_level_progress(callback_query.from_user.id, 5)
+    else:
+        await bot.send_message(callback_query.from_user.id, 'К сожалению,не верно...')
+    try:
+        if fact.id == user.last_fact:
+            user.change_last_fact(callback_query.from_user.id, fact.id + 1)
+        else:
+            user.change_last_fact(callback_query.from_user.id, fact.id)
+    except AttributeError:
+        pass
 
 
 @dp.message_handler(commands=['a'])
@@ -338,6 +378,7 @@ async def process_password(message: types.Message, state: FSMContext):
 
 
 async def main():
+    await set_main_menu()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

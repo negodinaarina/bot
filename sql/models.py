@@ -5,9 +5,10 @@ import datetime
 
 
 engine = create_engine("sqlite:///bot.db")
-Session = sessionmaker(bind=engine)
-session = Session()
 Base = declarative_base()
+Session = sessionmaker()
+Session.configure(bind=engine)
+session = Session()
 
 
 class User(Base):
@@ -68,10 +69,6 @@ class User(Base):
         return user
 
 
-    def find_user(self, string):
-        return
-
-
     def all_users(self):
         users = session.query(User).all()
         return users
@@ -82,42 +79,14 @@ class User(Base):
         session.commit()
 
 
-class Comment(Base):
-    __tablename__ = "comments"
-    id = Column(Integer, primary_key=True)
-    sender_id = Column(Integer)
-    recipient_id = Column(Integer)
-    text = Column(Text)
-    rating = Column(Integer)
-
-
-    @staticmethod
-    def add_comment(sender_id, recipient_id):
-        comment = Comment(sender_id=sender_id, recipient_id=recipient_id, text=None, rating=None)
-        session.add(comment)
-        session.commit()
-
-    @staticmethod
-    def edit_text(id, text):
-        comment = session.get(Comment, id=id)
-        comment.text = text
-        session.commit()
-
-    @staticmethod
-    def rate_comment(id, rating):
-        comment = session.get(Comment, id)
-        comment.rating = rating
-        session.commit()
-
 class Levels(Base):
     __tablename__ = "birds"
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    bird_name = Column(Text, unique=True)
+    id = Column(Integer, primary_key=True)
     bird_feature = Column(Text)
     bird_description = Column(Text)
-    bird_task = Column(Text)
+    bird_name = Column(Text)
     bird_level = Column(Integer)
-
+    img_path =Column(String)
 
     def get_bird_data(self, level):
         bird_info = session.get(Levels, level)
@@ -204,33 +173,3 @@ class Facts(Base):
 
 Base.metadata.create_all(engine)
 
-if not session.query(Levels).first():
-
-    chayka = Levels(
-        bird_name='Чайка',
-        bird_feature='Индивидуалистка',
-        bird_description='Любит рыбачить',
-        bird_task='Рыбачить и орать',
-        bird_level=1
-    )
-
-    golub = Levels(
-        bird_name='Голубь',
-        bird_feature='Влюбленный',
-        bird_description='Со всеми воркует',
-        bird_task='Со всеми ворковать',
-        bird_level=2
-    )
-
-    vorob = Levels(
-        bird_name='Воробей',
-        bird_feature='Боец',
-        bird_description='Маленький да удаленький',
-        bird_task='Пищать и драться',
-        bird_level=3
-    )
-
-    session.add(chayka)
-    session.add(golub)
-    session.add(vorob)
-    session.commit()
