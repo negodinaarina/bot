@@ -15,7 +15,7 @@ sudo apt install python3.10
 
 <h3>2. Установка pip и virtualenv</h3>
 
-python3.8 -m pip install --upgrade pip
+python3.10 -m pip install --upgrade pip
 
 pip --version
 
