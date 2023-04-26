@@ -1,6 +1,6 @@
 import asyncio, logging, random, datetime, os, kb
 from aiogram import Bot, Dispatcher, types, executor
-from sql.models import User, Levels, Event, Chat, Attendance, Facts
+from sql.models import User, Levels, Event, Chat, Attendance, Facts, Features
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -20,6 +20,7 @@ async def set_main_menu():
         BotCommand(command="/bird_mail", description="Отправить письмо"),
         BotCommand(command="/add_fact", description="Добавить факт о себе"),
         BotCommand(command="/play_facts", description="Играть в факты"),
+        BotCommand(command="/powers_info", description="Способности птицы"),
         BotCommand(command="/a", description="Секретный секрет")
     ])
 
@@ -185,7 +186,7 @@ async def end_state(message: types.Message, state: FSMContext):
         data['chat_id'] = message.text
         ch = Chat()
         chat = ch.get_chat_by_title(data['chat_id'])
-        msg = f"Новый слёт!\n{data['title']}\n{data['description']}\n{data['date']} {data['time']}\n{data['place']}\n Награда - {data['price']} зёрен."
+        msg = f"Новый слёт!\n{data['title']}\n{data['description']}\n{data['date']} {data['time']}\n{data['place']}\nНаграда - {data['price']} зёрен."
         await message.answer("Мероприятие создано, объявление отправлено в общий чат")
         await bot.send_message(chat.chat_id, msg)
     await state.finish()
@@ -241,12 +242,16 @@ async def cmd_start(message: types.Message):
             user = u.get_profile_data(message.from_user.id)
             delta = datetime.datetime.now() - user.last_mail
             if delta.days >= 1:
-                u.change_mail_date(message.from_user.id, datetime.datetime.now())
-                await BirdMailForm.letter.set()
-                await message.answer("Напишите письмо!")
-            else:
-                await message.answer("Вы уже писали письмо за последние сутки!")
-                return
+                random_user = u.get_user_notid(message.from_user.id)
+                if random_user is not None:
+                    u.change_mail_date(message.from_user.id, datetime.datetime.now())
+                    await BirdMailForm.letter.set()
+                    await message.answer("Напишите письмо!")
+                else:
+                    await message.answer("Некому писать....")
+                    return
+            else: await message.answer("Вы уже писали письмо за последние сутки!")
+            return
         else:
             await message.answer("Вы не можете пользоваться птичьей почтой до регистрации!")
 
@@ -255,18 +260,11 @@ async def cmd_start(message: types.Message):
 async def process_phrase(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['letter'] = message.text
-        try:
-            u = User()
-            users = u.all_users()
-            while True:
-                user = random.choice(users)
-                if user.tg_id != message.from_user.id:
-                    await bot.send_message(user.tg_id, f"Вам пришло письмо по птичьей почте:\n\n{data['letter']}")
-                    u.change_level_progress(message.from_user.id, 5)
-                    await message.answer("Сообщение отправлено, вы получили 5 зёрен.")
-                    break
-        except:
-            await message.answer(f"Что-то пошло не так...")
+        u = User()
+        random_user = u.get_user_notid(message.from_user.id)
+        await bot.send_message(random_user.tg_id, f"Вам пришло письмо по птичьей почте:\n\n{data['letter']}")
+        u.change_level_progress(message.from_user.id, 5)
+        await message.answer("Сообщение отправлено, вы получили 5 зёрен.")
     await state.finish()
 
 
@@ -274,8 +272,6 @@ async def process_phrase(message: types.Message, state: FSMContext):
 async def cmd_start(message: types.Message):
     if message.chat.type == 'private':
         if User().if_exists(message.from_user.id):
-            u = User()
-            user = u.get_profile_data(message.from_user.id)
             await FactForm.is_true.set()
             await message.answer("Введите тип факта: правда/ложь")
         else:
@@ -317,13 +313,12 @@ async def play_facts(message: types.Message):
         else: await message.answer("Факты закончились.... Подождите, пока кто-нибудь не расскажет о себе!")
 
 @dp.callback_query_handler(lambda c: c.data == 'pressed_true')
-async def process_callback_button1(callback_query: types.CallbackQuery):
+async def process_callback_true(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     f = Facts()
     u = User()
     user = u.get_profile_data(callback_query.from_user.id)
     fact = f.get_fact(user.tg_id, user.last_fact)
-    # new_fact = f.get_fact(user.tg_id, fact.id)
     if fact.is_true:
         await bot.send_message(callback_query.from_user.id, 'Правильный ответ!')
         u.change_level_progress(callback_query.from_user.id, 5)
@@ -336,7 +331,7 @@ async def process_callback_button1(callback_query: types.CallbackQuery):
 
 
 @dp.callback_query_handler(lambda c: c.data == 'pressed_false')
-async def process_callback_button2(callback_query: types.CallbackQuery):
+async def process_callback_false(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     f = Facts()
     u = User()
@@ -376,6 +371,97 @@ async def process_password(message: types.Message, state: FSMContext):
             await message.answer("Неверный пароль")
     await state.finish()
 
+@dp.message_handler(commands=['powers_info'])
+async def powers_info(message: types.Message):
+    if message.chat.type == 'private':
+        if User().if_exists(message.from_user.id):
+            user = User().get_profile_data(message.from_user.id)
+            features = Features().get_level_features(user.level)
+            msg = 'Способности птицы вашего уровня:'
+            for feature in features:
+                if feature.is_stolen:
+                    stolen = 'Воровство'
+                else:
+                    stolen = 'Удача'
+                msg += f'\n{feature.name}\n{feature.description}\nКоличесвто зерен, которое можно получить: от {feature.min_seeds} до {feature.max_seeds}\nТип способности:{stolen}\n\n'
+            await message.answer(msg)
+        else:
+            await message.answer("Вы не зарегистрированы!")
+
+
+@dp.message_handler(commands=['use_superpower'])
+async def use_superpower(message: types.Message):
+    if message.chat.type == 'private' and User().if_exists(message.from_user.id):
+        u = User()
+        user = u.get_profile_data(message.from_user.id)
+        if user.powers_used < 3:
+            await message.answer(f"Выберите номер суперспособности(написанные номера способностей не соответствуют номерам из описания, выбирая номер, вы выбираете случайную способность)", reply_markup=kb.features_kb_full)
+        else:
+            await message.answer("Вы уже исчерпали лимит использования способностей на вашем уровне!")
+@dp.callback_query_handler(lambda c: c.data == 0)
+async def process_callback_(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    u = User()
+    user = u.get_profile_data(callback_query.from_user.id)
+    f = Features()
+    features = f.get_level_features(user.level)
+    random.shuffle(features)
+    feature = features[0]
+    seeds = random.randint(feature.min_seeds, feature.max_seeds)
+    if feature.is_stolen:
+        random_user = u.get_user_notid(callback_query.from_user.id)
+        random_user.change_level_progress(random_user.tg_id, seeds*(-1))
+        await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
+        user.change_level_progress(user.tg_id, seeds)
+        await bot.send_message(callback_query.from_user.id, f"Вы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+    else:
+        user.change_level_progress(user.tg_id, seeds)
+        await bot.send_message(callback_query.from_user.id,
+                               f"Вы получили зерна:{seeds}")
+
+
+@dp.callback_query_handler(lambda c: int(c.data) == 1)
+async def process_callback_(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    u = User()
+    user = u.get_profile_data(callback_query.from_user.id)
+    f = Features()
+    features = f.get_level_features(user.level)
+    random.shuffle(features)
+    feature = features[1]
+    seeds = random.randint(feature.min_seeds, feature.max_seeds)
+    if feature.is_stolen:
+        random_user = u.get_user_notid(callback_query.from_user.id)
+        random_user.change_level_progress(random_user.tg_id, seeds*(-1))
+        await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
+        user.change_level_progress(user.tg_id, seeds)
+        await bot.send_message(callback_query.from_user.id, f"Вы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+    else:
+        user.change_level_progress(user.tg_id, seeds)
+        await bot.send_message(callback_query.from_user.id,
+                               f"Вы получили зерна:{seeds}")
+
+
+@dp.callback_query_handler(lambda c: int(c.data) == 2)
+async def process_callback_(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    u = User()
+    user = u.get_profile_data(callback_query.from_user.id)
+    f = Features()
+    features = f.get_level_features(user.level)
+    random.shuffle(features)
+    feature = features[2]
+    seeds = random.randint(feature.min_seeds, feature.max_seeds)
+    if feature.is_stolen:
+        random_user = u.get_user_notid(callback_query.from_user.id)
+        random_user.change_level_progress(random_user.tg_id, seeds*(-1))
+        await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
+        user.change_level_progress(user.tg_id, seeds)
+        await bot.send_message(callback_query.from_user.id, f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+    else:
+        user.change_level_progress(user.tg_id, seeds)
+        await bot.send_message(callback_query.from_user.id,
+                               f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
 
 async def main():
     await set_main_menu()

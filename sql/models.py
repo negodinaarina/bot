@@ -20,13 +20,14 @@ class User(Base):
     level_progress = Column(Integer)
     last_mail = Column(DateTime)
     last_fact = Column(Integer)
+    powers_used = Column(Integer)
     admin = Column(Boolean)
 
 
     def add_user(self, id, nickname):
         yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
         user = User(tg_id=id, tg_nickname=nickname, level=1, level_progress=0,
-                        bird_name="ПТИЦА", admin=False, last_mail=yesterday, last_fact=0)
+                        bird_name="ПТИЦА", admin=False, last_mail=yesterday, last_fact=0, powers_used=0)
         session.add(user)
         session.commit()
 
@@ -51,6 +52,10 @@ class User(Base):
         user = session.get(User, id)
         user.bird_name = name
         session.commit()
+
+    def get_user_notid(self, id):
+        user = session.query(User).filter(User.tg_id != id).first()
+        return user
 
     @staticmethod
     def change_level_progress(id, points):
@@ -82,7 +87,6 @@ class User(Base):
 class Levels(Base):
     __tablename__ = "birds"
     id = Column(Integer, primary_key=True)
-    bird_feature = Column(Text)
     bird_description = Column(Text)
     bird_name = Column(Text)
     bird_level = Column(Integer)
@@ -169,6 +173,22 @@ class Facts(Base):
     def get_fact(self, id, fact_num):
         fact = session.query(Facts).filter(Facts.user_id != id, Facts.id > fact_num).first()
         return fact
+
+
+class Features(Base):
+    __tablename__="features"
+    id = Column(Integer, primary_key=True)
+    level = Column(Integer)
+    name = Column(String)
+    description = Column(Text)
+    max_seeds = Column(Integer)
+    min_seeds = Column(Integer)
+    is_stolen = Column(Boolean)
+
+    def get_level_features(self, level):
+        features = session.query(Features).filter(Features.level==level).all()
+        return features
+
 
 
 Base.metadata.create_all(engine)
