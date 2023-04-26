@@ -83,6 +83,9 @@ class User(Base):
         user.last_mail = date
         session.commit()
 
+    def change_powers_used(self, amount):
+        self.powers_used += amount
+        session.commit()
 
 class Levels(Base):
     __tablename__ = "birds"
