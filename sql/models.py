@@ -187,6 +187,7 @@ class Features(Base):
     max_seeds = Column(Integer)
     min_seeds = Column(Integer)
     is_stolen = Column(Boolean)
+    img_path = Column(String)
 
     def get_level_features(self, level):
         features = session.query(Features).filter(Features.level==level).all()
