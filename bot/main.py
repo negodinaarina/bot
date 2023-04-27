@@ -152,7 +152,6 @@ async def process_date(message: types.Message, state: FSMContext):
                 lower_month = month[0].lower() + month[1:]
                 padej = lower_month+'a' if lower_month in ['март','август'] else lower_month+'я'
                 data['date'] = f'{day} {padej}'
-                #data['date'] = date.strftime('%d/%m')
                 await EventForm.next()
                 await message.answer("Введите время мероприятия в формате часы:минуты")
             else:
