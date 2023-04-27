@@ -6,7 +6,10 @@ from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import BotCommand, InputFile
 from forms import Form, FactForm, EventForm, CheckEventForm, BirdMailForm, AdminSigninForm
-logging.basicConfig(level=logging.INFO)
+from dateutil.parser import parse
+import time
+import locale
+locale.setlocale(locale.LC_ALL, "ru")
 bot = Bot(token="6178498873:AAHb-vf_yWBanGlFRh-WVMWVysaWAYoEFBg")
 dp = Dispatcher(bot, storage=MemoryStorage())
 
@@ -21,6 +24,7 @@ async def set_main_menu():
         BotCommand(command="/add_fact", description="Добавить факт о себе"),
         BotCommand(command="/play_facts", description="Играть в факты"),
         BotCommand(command="/powers_info", description="Способности птицы"),
+        BotCommand(command="/use_superpower", description="Использовать способность птицы"),
         BotCommand(command="/a", description="Секретный секрет")
     ])
 
@@ -52,7 +56,7 @@ async def process_name(message: types.Message, state: FSMContext):
         id = message.from_user.id
         user = User()
         user.edit_bird_name(id, data['name'])
-    await bot.send_message(id, f"Имя сменено на {data['name']}")
+    await bot.send_message(id, f"Имя сменено на *{data['name']}*", parse_mode= 'Markdown')
     await state.finish()
 
 
@@ -88,10 +92,12 @@ async def get_level_info(message: types.Message):
             bird = l.get_bird_data(level)
             usr_path=os.path.abspath('images')[:-11]
             photo = InputFile(f"{usr_path}{bird.img_path}")
-            msg = f"Ваша птица - {bird.bird_name}\nИмя вашей птицы - {user.bird_name}\nВаш уровень - {level}\n{bird.bird_description}\nВаш прогресс - {user.level_progress}/100 зёрен."
+            msg = f"Ваша птица: *{bird.bird_name}*\nИмя вашей птицы: *{user.bird_name}*\nВаш уровень: *{level}*" \
+                  f"\n{bird.bird_description}\nВаш прогресс: *{user.level_progress}/100 зёрен*."
             await bot.send_photo(message.from_user.id, photo,
                                  caption=msg,
-                                 reply_to_message_id=message.message_id)
+                                 reply_to_message_id=message.message_id,
+                                 parse_mode='Markdown')
         else:
             await message.answer("Профиль не найден...")
 
@@ -99,8 +105,12 @@ async def get_level_info(message: types.Message):
 async def create_event(message: types.Message):
     if User().if_exists(message.from_user.id):
         if User().is_admin(message.from_user.id):
-            await EventForm.title.set()
-            await message.answer("Введите название мероприятия")
+            print(Chat.get_all_chats())
+            if len(Chat.get_all_chats())!=0:
+                await EventForm.title.set()
+                await message.answer("Введите название мероприятия")
+            else:
+                await message.answer("Бот не зарегистрирован ни в одном чате!")
         else:
             await message.answer("Вы не являетесь птицей-админом!")
     else:
@@ -127,22 +137,43 @@ async def process_desc(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['description'] = message.text
     await EventForm.next()
-    await message.answer("Введите дату мероприятия")
+    await message.answer("Введите дату мероприятия в формате день/месяц/год")
 
 
 @dp.message_handler(state=EventForm.date)
 async def process_date(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data['date'] = message.text
-    await EventForm.next()
-    await message.answer("Введите время мероприятия")
+        try:
+            date = parse(message.text, dayfirst=True)
+            if date > datetime.datetime.now():
+                day = date.strftime("%d")
+                day = day[1] if day[0] == '0' else day
+                month = date.strftime("%B")
+                lower_month = month[0].lower() + month[1:]
+                padej = lower_month+'a' if lower_month in ['март','август'] else lower_month+'я'
+                data['date'] = f'{day} {padej}'
+                #data['date'] = date.strftime('%d/%m')
+                await EventForm.next()
+                await message.answer("Введите время мероприятия в формате часы:минуты")
+            else:
+                await message.answer("Кажется к этой дате птицы не успеют слететься...\nПопробуйте ввести дату из "
+                                     "будущего")
+        except ValueError:
+            await message.answer("Попробуйте ввести дату еще раз")
+
+
+
 
 @dp.message_handler(state=EventForm.time)
 async def process_time(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        data['time'] = message.text
-    await EventForm.next()
-    await message.answer("Введите место мероприятия")
+        try:
+            t = time.strptime(message.text, "%H:%M")
+            data['time'] = message.text
+            await EventForm.next()
+            await message.answer("Введите место мероприятия")
+        except:
+            await message.answer("Попробуйте ввести время еще раз")
 
 
 @dp.message_handler(state=EventForm.place)
@@ -174,8 +205,8 @@ async def process_phrase(message: types.Message, state: FSMContext):
             chats = Chat.get_all_chats()
             choice = ''
             for chat in chats:
-                choice += f"{chat.chat_name}\n"
-            await message.answer(f"Выберите чат:\n{choice}")
+                choice += f"`{chat.chat_name}`\n"
+            await message.answer(f"Выберите чат:\n{choice}", parse_mode='Markdown')
         else:
             await message.answer("Такое кодовое слово уже существует, попробуйте снова!")
 
@@ -186,9 +217,10 @@ async def end_state(message: types.Message, state: FSMContext):
         data['chat_id'] = message.text
         ch = Chat()
         chat = ch.get_chat_by_title(data['chat_id'])
-        msg = f"Новый слёт!\n{data['title']}\n{data['description']}\n{data['date']} {data['time']}\n{data['place']}\nНаграда - {data['price']} зёрен."
+        msg = f"Новый слёт!\n*{data['title']}*\n{data['description']}\n{data['date']} {data['time']}\n" \
+              f"{data['place']}\nНаграда - *{data['price']} зёрен*."
         await message.answer("Мероприятие создано, объявление отправлено в общий чат")
-        await bot.send_message(chat.chat_id, msg)
+        await bot.send_message(chat.chat_id, msg, parse_mode='Markdown')
     await state.finish()
 
 
@@ -228,7 +260,7 @@ async def process_phrase(message: types.Message, state: FSMContext):
             else:
                 a.add_attendance(id, event.id)
                 user.change_level_progress(id, points)
-                await message.answer(f"Мероприятие отмечено. Зерен получено: {points} ")
+                await message.answer(f"Мероприятие отмечено. Зерен получено: *{points}* ", parse_mode='Markdown')
         except:
             await message.answer(f"Мероприятие не найдено...")
     await state.finish()
@@ -262,9 +294,11 @@ async def process_phrase(message: types.Message, state: FSMContext):
         data['letter'] = message.text
         u = User()
         random_user = u.get_user_notid(message.from_user.id)
-        await bot.send_message(random_user.tg_id, f"Вам пришло письмо по птичьей почте:\n\n{data['letter']}")
+        await bot.send_message(random_user.tg_id, f"Вам пришло письмо по птичьей почте:\n\n\U0001F48C	"
+                                                  f"_{data['letter']}_\U0001F48C",
+                               parse_mode='Markdown')
         u.change_level_progress(message.from_user.id, 5)
-        await message.answer("Сообщение отправлено, вы получили 5 зёрен.")
+        await message.answer("Сообщение отправлено, вы получили *5 зёрен*.", parse_mode='Markdown')
     await state.finish()
 
 
@@ -325,7 +359,10 @@ async def process_callback_true(callback_query: types.CallbackQuery):
     else:
         await bot.send_message(callback_query.from_user.id, 'К сожалению,не верно...')
     try:
-        user.change_last_fact(callback_query.from_user.id, fact.id+1)
+        if fact.id == user.last_fact:
+            user.change_last_fact(fact.id + 1)
+        else:
+            user.change_last_fact(fact.id)
     except AttributeError:
         pass
 
@@ -344,9 +381,9 @@ async def process_callback_false(callback_query: types.CallbackQuery):
         await bot.send_message(callback_query.from_user.id, 'К сожалению,не верно...')
     try:
         if fact.id == user.last_fact:
-            user.change_last_fact(callback_query.from_user.id, fact.id + 1)
+            user.change_last_fact(fact.id + 1)
         else:
-            user.change_last_fact(callback_query.from_user.id, fact.id)
+            user.change_last_fact(fact.id)
     except AttributeError:
         pass
 
@@ -383,8 +420,9 @@ async def powers_info(message: types.Message):
                     stolen = 'Воровство'
                 else:
                     stolen = 'Удача'
-                msg += f'\n{feature.name}\n{feature.description}\nКоличесвто зерен, которое можно получить: от {feature.min_seeds} до {feature.max_seeds}\nТип способности:{stolen}\n\n'
-            await message.answer(msg)
+                msg += f'\n*{feature.name}*\n{feature.description}\nКоличество зерен, которое можно получить: от' \
+                       f' *{feature.min_seeds}* до *{feature.max_seeds}*\nТип способности:*{stolen}*\n\n'
+            await message.answer(msg, parse_mode= 'Markdown')
         else:
             await message.answer("Вы не зарегистрированы!")
 
@@ -398,7 +436,7 @@ async def use_superpower(message: types.Message):
             await message.answer(f"Выберите номер суперспособности(написанные номера способностей не соответствуют номерам из описания, выбирая номер, вы выбираете случайную способность)", reply_markup=kb.features_kb_full)
         else:
             await message.answer("Вы уже исчерпали лимит использования способностей на вашем уровне!")
-@dp.callback_query_handler(lambda c: c.data == 1)
+@dp.callback_query_handler(lambda c: int(c.data) == 0)
 async def process_callback_1(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     u = User()
@@ -410,24 +448,27 @@ async def process_callback_1(callback_query: types.CallbackQuery):
     features = f.get_level_features(user.level)
     random.shuffle(features)
     feature = features[0]
+    usr_path = os.path.abspath('images')[:-11]
+    photo = InputFile(f"{usr_path}{feature.img_path}")
     seeds = random.randint(feature.min_seeds, feature.max_seeds)
     if feature.is_stolen:
         random_user = u.get_user_notid(callback_query.from_user.id)
-        if random_user.level > 0 and random_user.level_progress >= seeds:
+        if random_user is not None and random_user.level > 0 and random_user.level_progress >= seeds:
             random_user.change_level_progress(random_user.tg_id, seeds*(-1))
-            await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
+            await bot.send_message(random_user.tg_id, f"Птица *{user.bird_name}* игрока *{user.tg_nickname}* забрал у "
+                                                      f"вашей птицы зёрен: *{seeds}*", parse_mode='Markdown')
             user.change_level_progress(user.tg_id, seeds)
             user.change_powers_used(1)
-            await bot.send_message(callback_query.from_user.id, f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:\n{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
         else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не ожете украсть зёрна, так как у другого игрока меньше зёрен.")
     else:
         user.change_level_progress(user.tg_id, seeds)
-        await bot.send_message(callback_query.from_user.id,
-                               f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
+        await bot.send_photo(callback_query.from_user.id, photo,
+                               caption=f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
     user.change_powers_used(1)
 
 
-@dp.callback_query_handler(lambda c: int(c.data) == 2)
+@dp.callback_query_handler(lambda c: int(c.data) == 1)
 async def process_callback_2(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     u = User()
@@ -439,23 +480,27 @@ async def process_callback_2(callback_query: types.CallbackQuery):
     features = f.get_level_features(user.level)
     random.shuffle(features)
     feature = features[1]
+    usr_path = os.path.abspath('images')[:-11]
+    photo = InputFile(f"{usr_path}{feature.img_path}")
     seeds = random.randint(feature.min_seeds, feature.max_seeds)
     if feature.is_stolen:
         random_user = u.get_user_notid(callback_query.from_user.id)
-        if random_user.level > 0 and random_user.level_progress >= seeds:
+        if random_user is not None and random_user.level > 0 and random_user.level_progress >= seeds:
             random_user.change_level_progress(random_user.tg_id, seeds*(-1))
-            await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
+            await bot.send_message(random_user.tg_id, f"Птица *{user.bird_name}* игрока *{user.tg_nickname}* забрал у "
+                                                      f"вашей птицы зёрен: *{seeds}*", parse_mode='Markdown')
             user.change_level_progress(user.tg_id, seeds)
-            await bot.send_message(callback_query.from_user.id, f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
-        else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не можете украсть зёрна, так как у другого игрока меньше зёрен.")
+            user.change_powers_used(1)
+            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:\n{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+        else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не ожете украсть зёрна, так как у другого игрока меньше зёрен.")
     else:
         user.change_level_progress(user.tg_id, seeds)
-        await bot.send_message(callback_query.from_user.id,
-                               f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
+        await bot.send_photo(callback_query.from_user.id, photo,
+                               caption=f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
     user.change_powers_used(1)
 
 
-@dp.callback_query_handler(lambda c: int(c.data) == 3)
+@dp.callback_query_handler(lambda c: int(c.data) == 2)
 async def process_callback_3(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     u = User()
@@ -467,19 +512,23 @@ async def process_callback_3(callback_query: types.CallbackQuery):
     features = f.get_level_features(user.level)
     random.shuffle(features)
     feature = features[2]
+    usr_path = os.path.abspath('images')[:-11]
+    photo = InputFile(f"{usr_path}{feature.img_path}")
     seeds = random.randint(feature.min_seeds, feature.max_seeds)
     if feature.is_stolen:
         random_user = u.get_user_notid(callback_query.from_user.id)
-        if random_user.level > 0 and random_user.level_progress >= seeds:
+        if random_user is not None and random_user.level > 0 and random_user.level_progress >= seeds:
             random_user.change_level_progress(random_user.tg_id, seeds*(-1))
-            await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
+            await bot.send_message(random_user.tg_id, f"Птица *{user.bird_name}* игрока *{user.tg_nickname}* забрал у "
+                                                      f"вашей птицы зёрен: *{seeds}*", parse_mode= 'Markdown')
             user.change_level_progress(user.tg_id, seeds)
-            await bot.send_message(callback_query.from_user.id, f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+            user.change_powers_used(1)
+            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:\n{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
         else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не ожете украсть зёрна, так как у другого игрока меньше зёрен.")
     else:
         user.change_level_progress(user.tg_id, seeds)
-        await bot.send_message(callback_query.from_user.id,
-                               f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
+        await bot.send_photo(callback_query.from_user.id, photo,
+                               caption=f"Использована суперспособность:{feature.name}\nВы получили зерна:{seeds}")
     user.change_powers_used(1)
 
 async def main():
