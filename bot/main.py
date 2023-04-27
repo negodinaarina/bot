@@ -100,8 +100,12 @@ async def get_level_info(message: types.Message):
 async def create_event(message: types.Message):
     if User().if_exists(message.from_user.id):
         if User().is_admin(message.from_user.id):
-            await EventForm.title.set()
-            await message.answer("Введите название мероприятия")
+            print(Chat.get_all_chats())
+            if len(Chat.get_all_chats())!=0:
+                await EventForm.title.set()
+                await message.answer("Введите название мероприятия")
+            else:
+                await message.answer("Бот не зарегистрирован ни в одном чате!")
         else:
             await message.answer("Вы не являетесь птицей-админом!")
     else:
@@ -326,7 +330,10 @@ async def process_callback_true(callback_query: types.CallbackQuery):
     else:
         await bot.send_message(callback_query.from_user.id, 'К сожалению,не верно...')
     try:
-        user.change_last_fact(callback_query.from_user.id, fact.id+1)
+        if fact.id == user.last_fact:
+            user.change_last_fact(fact.id + 1)
+        else:
+            user.change_last_fact(fact.id)
     except AttributeError:
         pass
 
@@ -345,9 +352,9 @@ async def process_callback_false(callback_query: types.CallbackQuery):
         await bot.send_message(callback_query.from_user.id, 'К сожалению,не верно...')
     try:
         if fact.id == user.last_fact:
-            user.change_last_fact(callback_query.from_user.id, fact.id + 1)
+            user.change_last_fact(fact.id + 1)
         else:
-            user.change_last_fact(callback_query.from_user.id, fact.id)
+            user.change_last_fact(fact.id)
     except AttributeError:
         pass
 
@@ -399,7 +406,7 @@ async def use_superpower(message: types.Message):
             await message.answer(f"Выберите номер суперспособности(написанные номера способностей не соответствуют номерам из описания, выбирая номер, вы выбираете случайную способность)", reply_markup=kb.features_kb_full)
         else:
             await message.answer("Вы уже исчерпали лимит использования способностей на вашем уровне!")
-@dp.callback_query_handler(lambda c: c.data == 0)
+@dp.callback_query_handler(lambda c: int(c.data) == 0)
 async def process_callback_1(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     u = User()
@@ -416,12 +423,12 @@ async def process_callback_1(callback_query: types.CallbackQuery):
     seeds = random.randint(feature.min_seeds, feature.max_seeds)
     if feature.is_stolen:
         random_user = u.get_user_notid(callback_query.from_user.id)
-        if random_user.level > 0 and random_user.level_progress >= seeds:
+        if random_user is not None and random_user.level > 0 and random_user.level_progress >= seeds:
             random_user.change_level_progress(random_user.tg_id, seeds*(-1))
             await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
             user.change_level_progress(user.tg_id, seeds)
             user.change_powers_used(1)
-            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:\n{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
         else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не ожете украсть зёрна, так как у другого игрока меньше зёрен.")
     else:
         user.change_level_progress(user.tg_id, seeds)
@@ -430,7 +437,7 @@ async def process_callback_1(callback_query: types.CallbackQuery):
     user.change_powers_used(1)
 
 
-@dp.callback_query_handler(lambda c: c.data == 1)
+@dp.callback_query_handler(lambda c: int(c.data) == 1)
 async def process_callback_2(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     u = User()
@@ -447,12 +454,12 @@ async def process_callback_2(callback_query: types.CallbackQuery):
     seeds = random.randint(feature.min_seeds, feature.max_seeds)
     if feature.is_stolen:
         random_user = u.get_user_notid(callback_query.from_user.id)
-        if random_user.level > 0 and random_user.level_progress >= seeds:
+        if random_user is not None and random_user.level > 0 and random_user.level_progress >= seeds:
             random_user.change_level_progress(random_user.tg_id, seeds*(-1))
             await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
             user.change_level_progress(user.tg_id, seeds)
             user.change_powers_used(1)
-            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:\n{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
         else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не ожете украсть зёрна, так как у другого игрока меньше зёрен.")
     else:
         user.change_level_progress(user.tg_id, seeds)
@@ -461,7 +468,7 @@ async def process_callback_2(callback_query: types.CallbackQuery):
     user.change_powers_used(1)
 
 
-@dp.callback_query_handler(lambda c: c.data == 2)
+@dp.callback_query_handler(lambda c: int(c.data) == 2)
 async def process_callback_3(callback_query: types.CallbackQuery):
     await bot.answer_callback_query(callback_query.id)
     u = User()
@@ -478,12 +485,12 @@ async def process_callback_3(callback_query: types.CallbackQuery):
     seeds = random.randint(feature.min_seeds, feature.max_seeds)
     if feature.is_stolen:
         random_user = u.get_user_notid(callback_query.from_user.id)
-        if random_user.level > 0 and random_user.level_progress >= seeds:
+        if random_user is not None and random_user.level > 0 and random_user.level_progress >= seeds:
             random_user.change_level_progress(random_user.tg_id, seeds*(-1))
             await bot.send_message(random_user.tg_id, f"Птица {user.bird_name} игрока {user.tg_nickname} забрал у вашей птицы зёрен: {seeds}")
             user.change_level_progress(user.tg_id, seeds)
             user.change_powers_used(1)
-            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
+            await bot.send_photo(callback_query.from_user.id, photo, caption=f"Использована суперспособность:\n{feature.name}\nВы забрали зёрна: {seeds} от пользователя {random_user.tg_nickname}")
         else: await bot.send_message(callback_query.from_user.id, "Шалость не удалась, вам выпала способность типа Воровство, однако вы не ожете украсть зёрна, так как у другого игрока меньше зёрен.")
     else:
         user.change_level_progress(user.tg_id, seeds)

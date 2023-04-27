@@ -87,6 +87,10 @@ class User(Base):
         self.powers_used += amount
         session.commit()
 
+    def change_last_fact(self, num):
+        self.last_fact = num
+        session.commit()
+
 class Levels(Base):
     __tablename__ = "birds"
     id = Column(Integer, primary_key=True)
@@ -119,7 +123,6 @@ class Event(Base):
         event_info = session.query(Event).filter_by(code_phrase=phrase).first()
         return event_info
 
-
 class Chat(Base):
     __tablename__ = "chats"
     chat_id = Column(String, primary_key=True)
@@ -139,6 +142,7 @@ class Chat(Base):
     def get_chat_by_title(self, title):
         chat = session.query(Chat).filter_by(chat_name=title).first()
         return chat
+
 
 class Attendance(Base):
     __tablename__ = "attendance"
